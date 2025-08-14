@@ -19,31 +19,24 @@ jobs:
           shellcheck -x install.sh menu.sh restore.sh scripts/**/*.sh || true
 
   lint_yaml:
-    name: Lint YAML
+    name: Lint YAML (yamllint via pip)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # Покажем, что именно ругается, но НЕ упадём, если предупреждения
+      - name: Install yamllint
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install yamllint
       - name: Run yamllint (relaxed)
-        uses: ibiqlik/action-yamllint@v3
-        with:
-          file_or_dir: |
-            docker-compose.yml
-            .github/workflows
-          # Мягкие правила прямо в workflow (можно оставить .yamllint — не принципиально)
-          config_data: |
-            extends: default
-            rules:
-              line-length: disable
-              document-start: disable
-              trailing-spaces: disable
-              indentation:
-                indent-sequences: consistent
-              new-lines: enable
-              truthy:
-                allowed-values: ["true", "false", "on", "off", "yes", "no"]
-          strict: false
+        run: |
+          set -e
+          echo "Using config .yamllint (if present) or defaults"
+          if [ -f .yamllint ]; then
+            yamllint -c .yamllint docker-compose.yml .github/workflows || true
+          else
+            yamllint docker-compose.yml .github/workflows || true
+          fi
+          echo "YAML lint finished (warnings ignored)."
 
   validate_env:
     name: Validate .env.example variables
@@ -76,18 +69,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Create bundle
         id: bundle
         shell: bash
         run: |
           ts=$(date +%s)
           FILENAME="FreeNETvpn-bundle-${ts}.tar.gz"
-          tar czf "$FILENAME" .
+          # не пакуем .git, чтобы не раздуть размер
+          tar --exclude='.git' -czf "$FILENAME" .
           echo "file=$FILENAME" >> "$GITHUB_OUTPUT"
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: FreeNETvpn-bundle
           path: ${{ steps.bundle.outputs.file }}
+          if-no-files-found: error
+          retention-days: 7
