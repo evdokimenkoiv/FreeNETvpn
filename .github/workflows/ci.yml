@@ -30,7 +30,6 @@ jobs:
       - name: Run yamllint (relaxed)
         run: |
           set -e
-          echo "Using config .yamllint (if present) or defaults"
           if [ -f .yamllint ]; then
             yamllint -c .yamllint docker-compose.yml .github/workflows || true
           else
@@ -69,15 +68,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Create bundle
+
+      - name: Create bundle via git archive
         id: bundle
-        shell: bash
         run: |
           ts=$(date +%s)
           FILENAME="FreeNETvpn-bundle-${ts}.tar.gz"
-          # не пакуем .git, чтобы не раздуть размер
-          tar --exclude='.git' -czf "$FILENAME" .
+          git archive --format=tar.gz -o "$FILENAME" HEAD
           echo "file=$FILENAME" >> "$GITHUB_OUTPUT"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
