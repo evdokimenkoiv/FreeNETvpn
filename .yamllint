@@ -1,8 +1,7 @@
 extends: default
-
 rules:
-  line-length: disable      # не ругаемся на длину строк (workflow часто длинные)
-  document-start: disable   # не требуем '---' в начале
+  line-length: disable
+  document-start: disable
   indentation:
     indent-sequences: consistent
   trailing-spaces: enable
