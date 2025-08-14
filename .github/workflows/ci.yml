@@ -57,18 +57,19 @@ jobs:
       - name: Validate compose
         run: docker-compose config
 
-  bundle-release:
-    name: Bundle repo artifact
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Create bundle
-        run: |
-          ts=$(date +%s)
-          tar czf FreeNETvpn-bundle-$ts.tar.gz .
-          echo "BUNDLE=FreeNETvpn-bundle-$ts.tar.gz" >> $GITHUB_ENV
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.BUNDLE }}
-          path: ${{ env.BUNDLE }}
+bundle-release:
+  name: Bundle repo artifact
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - name: Create bundle
+      run: |
+        ts=$(date +%s)
+        FILENAME="FreeNETvpn-bundle-${ts}.tar.gz"
+        tar czf "$FILENAME" .
+        echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: FreeNETvpn-bundle
+        path: ${{ env.FILENAME }}
