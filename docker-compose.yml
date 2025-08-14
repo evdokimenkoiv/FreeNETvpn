@@ -1,0 +1,107 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    networks: [frontend, backend]
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    environment:
+      - DOMAIN=${DOMAIN}
+      - LE_EMAIL=${LE_EMAIL}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./caddy/site:/usr/share/caddy/site:ro
+
+  admin:
+    build: ./admin
+    restart: unless-stopped
+    networks: [backend]
+    environment:
+      - BASIC_USER=${ADMIN_USER}
+      - BASIC_PASS=${ADMIN_PASS}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./services:/srv/services:ro
+      - ./host:/srv/host:ro
+      - ./backups:/srv/backups
+    labels:
+      caddy: ${DOMAIN}
+      caddy.route.0: "/admin*"
+      caddy.route.0.reverse_proxy: "{{upstreams 8000}}"
+      caddy.route.0.basicauth: "* {env.BASIC_USER} {env.BASIC_PASS}"
+
+  wg-easy:
+    image: weejewel/wg-easy
+    restart: unless-stopped
+    networks: [backend]
+    environment:
+      - WG_HOST=${DOMAIN}
+      - PASSWORD=${ADMIN_PASS}
+      - WG_PORT=${WG_PORT}
+      - WG_DEFAULT_DNS=${DNS1},${DNS2}
+    cap_add: [NET_ADMIN, SYS_MODULE]
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - wg_data:/etc/wireguard
+    labels:
+      caddy: ${DOMAIN}
+      caddy.route.1: "/wg*"
+      caddy.route.1.reverse_proxy: "{{upstreams 51821}}"
+      caddy.route.1.basicauth: "* {env.BASIC_USER} {env.BASIC_PASS}"
+
+  outline:
+    image: quay.io/outline/shadowbox:${OUTLINE_DOCKER_TAG}
+    restart: unless-stopped
+    networks: [backend]
+    environment:
+      - SB_API_PREFIX=/outline
+    volumes:
+      - outline_data:/root/shadowbox
+    labels:
+      caddy: ${DOMAIN}
+      caddy.route.2: "/outline*"
+      caddy.route.2.reverse_proxy: "{{upstreams 8081}}"
+      caddy.route.2.basicauth: "* {env.BASIC_USER} {env.BASIC_PASS}"
+
+  xray:
+    image: teddysun/xray
+    restart: unless-stopped
+    networks: [backend]
+    environment:
+      - VLESS_UUID=${VLESS_UUID}
+      - VLESS_WS_PATH=${VLESS_WS_PATH}
+    volumes:
+      - ./services/xray/config.json:/etc/xray/config.json:ro
+    command: ["-config", "/etc/xray/config.json"]
+    labels:
+      caddy: ${DOMAIN}
+      caddy.route.3: "${VLESS_WS_PATH}*"
+      caddy.route.3.reverse_proxy: "{{upstreams 10000}}"
+
+  amnezia:
+    image: amnezia/amo:${AMNEZIA_DOCKER_TAG}
+    restart: unless-stopped
+    networks: [backend]
+    volumes:
+      - amnezia_data:/opt/amnezia
+    labels:
+      caddy: ${DOMAIN}
+      caddy.route.4: "/amnezia*"
+      caddy.route.4.reverse_proxy: "{{upstreams 5000}}"
+      caddy.route.4.basicauth: "* {env.BASIC_USER} {env.BASIC_PASS}"
+
+networks:
+  frontend: {}
+  backend: {}
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}
+  wg_data: {}
+  outline_data: {}
+  amnezia_data: {}
