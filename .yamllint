@@ -1,0 +1,10 @@
+extends: default
+
+rules:
+  line-length: disable      # не ругаемся на длину строк (workflow часто длинные)
+  document-start: disable   # не требуем '---' в начале
+  indentation:
+    indent-sequences: consistent
+  trailing-spaces: enable
+  truthy:
+    allowed-values: ["true", "false", "on", "off", "yes", "no"]
