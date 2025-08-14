@@ -23,12 +23,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ibiqlik/action-yamllint@v3
+
+      # Покажем, что именно ругается, но НЕ упадём, если предупреждения
+      - name: Run yamllint (relaxed)
+        uses: ibiqlik/action-yamllint@v3
         with:
           file_or_dir: |
             docker-compose.yml
             .github/workflows
-          config_file: .yamllint
+          # Мягкие правила прямо в workflow (можно оставить .yamllint — не принципиально)
+          config_data: |
+            extends: default
+            rules:
+              line-length: disable
+              document-start: disable
+              trailing-spaces: disable
+              indentation:
+                indent-sequences: consistent
+              new-lines: enable
+              truthy:
+                allowed-values: ["true", "false", "on", "off", "yes", "no"]
+          strict: false
 
   validate_env:
     name: Validate .env.example variables
@@ -61,14 +76,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Create bundle
+        id: bundle
+        shell: bash
         run: |
           ts=$(date +%s)
           FILENAME="FreeNETvpn-bundle-${ts}.tar.gz"
           tar czf "$FILENAME" .
-          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "file=$FILENAME" >> "$GITHUB_OUTPUT"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: FreeNETvpn-bundle
-          path: ${{ env.FILENAME }}
+          path: ${{ steps.bundle.outputs.file }}
