@@ -2,8 +2,12 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
-    networks: [frontend, backend]
-    ports: ["80:80/tcp","443:443/tcp"]
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
     environment:
       - DOMAIN=${DOMAIN}
       - LE_EMAIL=${LE_EMAIL}
@@ -16,7 +20,8 @@ services:
   admin:
     build: ./admin
     restart: unless-stopped
-    networks: [backend]
+    networks:
+      - backend
     environment:
       - BASIC_USER=${ADMIN_USER}
       - BASIC_PASS=${ADMIN_PASS}
@@ -34,13 +39,16 @@ services:
   wg-easy:
     image: weejewel/wg-easy
     restart: unless-stopped
-    networks: [backend]
+    networks:
+      - backend
     environment:
       - WG_HOST=${DOMAIN}
       - PASSWORD=${ADMIN_PASS}
       - WG_PORT=${WG_PORT}
       - WG_DEFAULT_DNS=${DNS1},${DNS2}
-    cap_add: [NET_ADMIN, SYS_MODULE]
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
@@ -55,7 +63,8 @@ services:
   outline:
     image: quay.io/outline/shadowbox:${OUTLINE_DOCKER_TAG}
     restart: unless-stopped
-    networks: [backend]
+    networks:
+      - backend
     environment:
       - SB_API_PREFIX=/outline
     volumes:
@@ -69,7 +78,8 @@ services:
   xray:
     image: teddysun/xray
     restart: unless-stopped
-    networks: [backend]
+    networks:
+      - backend
     environment:
       - VLESS_UUID=${VLESS_UUID}
       - VLESS_WS_PATH=${VLESS_WS_PATH}
@@ -84,7 +94,8 @@ services:
   amnezia:
     image: amnezia/amo:${AMNEZIA_DOCKER_TAG}
     restart: unless-stopped
-    networks: [backend]
+    networks:
+      - backend
     volumes:
       - amnezia_data:/opt/amnezia
     labels:
