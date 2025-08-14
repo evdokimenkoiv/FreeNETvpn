@@ -3,10 +3,7 @@
     {
       "port": 10000,
       "protocol": "vless",
-      "settings": {
-        "clients": [ { "id": "${VLESS_UUID}", "flow": "" } ],
-        "decryption": "none"
-      },
+      "settings": { "clients": [ { "id": "${VLESS_UUID}", "flow": "" } ], "decryption": "none" },
       "streamSettings": { "network": "ws", "wsSettings": { "path": "${VLESS_WS_PATH}" } }
     }
   ],

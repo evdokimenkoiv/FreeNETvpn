@@ -1,3 +1,5 @@
+![CI](https://github.com/evdokimenkoiv/FreeNETvpn/actions/workflows/ci.yml/badge.svg)
+
 # FreeNETvpn
 
 One-command deploy of multiple VPN services on Ubuntu (22.04/24.04 LTS):
@@ -27,25 +29,32 @@ bash <(curl -fsSL https://raw.githubusercontent.com/evdokimenkoiv/FreeNETvpn/mai
 - IPv6: auto-detected (you can enable/disable explicitly)
 - WireGuard port: default 51820, or custom, or random allowed
 - SSH hardening: port change, disable password login, enable fail2ban & UFW (on by default)
-- **Optional SSH 2FA (TOTP)** with Google Authenticator
+- Optional SSH 2FA (TOTP) with Google Authenticator
 
 ### After install
 Open `https://<your-domain>/` → `/admin` (BasicAuth) and `/wg`, `/outline`, `/docs`.  
 Run `./menu.sh` for advanced tasks.
 
 ## Regional resilience (RU/CN focus)
-- VLESS over **WebSocket+TLS** at randomized path (`VLESS_WS_PATH`), fronted by Caddy – looks like normal HTTPS.
-- Scripts to rotate VLESS UUID & path (`scripts/rotate_vless.sh`).
-- Split-tunneling & DNS options on clients.
+- VLESS over WebSocket+TLS at randomized path (`VLESS_WS_PATH`), fronted by Caddy – looks like normal HTTPS.
+- Rotate VLESS UUID & path (`scripts/rotate_vless.sh`).
 
 ## Security defaults
-- UFW + fail2ban. SSH port randomization (optional). Password logins off (optional).  
-- **IKEv2 uses own CA and server cert** (not Let’s Encrypt) – proper EKU/SAN for IPsec.  
-- Web endpoints are TLS‑terminated via Caddy/LE (prod).
+- UFW + fail2ban. Optional SSH hardening & 2FA.  
+- IKEv2 uses own CA and server cert (proper EKU/SAN for IPsec).  
+- Web endpoints via Caddy/LE (prod).
 
 ## Backups & Restore
 - Create local backup via CLI or `/admin/backup`, download the archive.
 - Restore on a new server: `./restore.sh <backup.tar.gz>`.
+
+## CI & Health Check
+- CI: Shellcheck (bash), YAML lint, admin image build, compose config validation, **env vars validation**, and **release artifact bundle**.
+- On server:
+```
+sudo bash scripts/health_check.sh
+sudo bash scripts/health_check.sh -q  # quiet
+```
 
 ## License
 MIT

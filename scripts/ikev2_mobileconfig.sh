@@ -5,11 +5,9 @@ read -rp "Username (EAP): " U
 read -rp "VPN Display Name (default: FreeNETvpn IKEv2): " NAME
 NAME=${NAME:-FreeNETvpn IKEv2}
 CA_PATH="/etc/ipsec.d/cacerts/caCert.pem"
-if [[ ! -f "$CA_PATH" ]]; then echo "CA not found. Run scripts/ipsec_init_pki.sh first."; exit 1; fi
+[[ -f "$CA_PATH" ]] || { echo "CA not found. Run scripts/ipsec_init_pki.sh first."; exit 1; }
 UUID1=$(cat /proc/sys/kernel/random/uuid)
 UUID2=$(cat /proc/sys/kernel/random/uuid)
-
-# Build mobileconfig
 OUT="services/ikev2/${U}-${DOMAIN}.mobileconfig"
 mkdir -p services/ikev2
 CA_BASE64=$(base64 -w0 "$CA_PATH")

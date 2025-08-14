@@ -28,14 +28,14 @@ def index(credentials: HTTPBasicCredentials = security):
 
 @app.get("/admin/status", response_class=HTMLResponse)
 def status(credentials: HTTPBasicCredentials = security):
-    a = auth(credentials)
+    a = auth(credentials); 
     if a: return a
     out = subprocess.check_output(["/usr/bin/docker","ps","--format","{{.Names}} -> {{.Status}}"]).decode()
     return HTMLResponse("<pre>"+out+"</pre>")
 
 @app.get("/admin/backup")
 def backup(credentials: HTTPBasicCredentials = security):
-    a = auth(credentials)
+    a = auth(credentials); 
     if a: return a
     out_path = Path("/srv/backups")/f"freenetvpn-backup-{int(time.time())}.tar.gz"
     subprocess.check_call(["tar","czf",str(out_path),"/srv/services","/srv/host"])
