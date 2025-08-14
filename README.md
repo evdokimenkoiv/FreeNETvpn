@@ -59,6 +59,4 @@ After completion open `https://<your-domain>/` to access the panel.
 - Use responsibly and according to your local laws. This project is for educational and administrative purposes.
 - Strong defaults are provided, but you are responsible for security of your infrastructure.
 
-## License
 
-MIT
