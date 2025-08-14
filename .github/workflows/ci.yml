@@ -19,16 +19,25 @@ jobs:
           shellcheck -x install.sh menu.sh restore.sh scripts/**/*.sh || true
 
   lint-yaml:
-  name: Lint YAML
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - uses: ibiqlik/action-yamllint@v3
-      with:
-        file_or_dir: |
-          docker-compose.yml
-          .github/workflows
-        config_file: .yamllint
+    name: Lint YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: |
+            docker-compose.yml
+            .github/workflows
+          config_file: .yamllint
+
+  validate-env:
+    name: Validate .env.example variables
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run validator
+        run: |
+          python3 tools/validate_env.py
 
   build-admin:
     name: Build admin image
@@ -38,12 +47,28 @@ jobs:
       - name: Build
         run: docker build -t freenetvpn-admin ./admin
 
-  validate-compose:
-    name: Validate docker-compose
+  compose-check:
+    name: docker-compose config
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install docker compose
+      - name: Install docker-compose
         run: sudo apt-get update -y && sudo apt-get install -y docker-compose
-      - name: Config check
+      - name: Validate compose
         run: docker-compose config
+
+  bundle-release:
+    name: Bundle repo artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create bundle
+        run: |
+          ts=$(date +%s)
+          tar czf FreeNETvpn-bundle-$ts.tar.gz .
+          echo "BUNDLE=FreeNETvpn-bundle-$ts.tar.gz" >> $GITHUB_ENV
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BUNDLE }}
+          path: ${{ env.BUNDLE }}
