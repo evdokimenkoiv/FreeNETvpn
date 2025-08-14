@@ -1,36 +1,21 @@
-import re, sys, os, yaml
-ENV_FILE = '.env.example'
-COMPOSE_FILE = 'docker-compose.yml'
+import re, sys, pathlib
 
-def parse_env(path):
-    env = set()
-    with open(path, 'r', encoding='utf-8') as f:
-        for line in f:
-            line=line.strip()
-            if not line or line.startswith('#') or '=' not in line: continue
-            k=line.split('=',1)[0].strip()
-            if k: env.add(k)
-    return env
+root = pathlib.Path(".")
+compose = (root / "docker-compose.yml").read_text(encoding="utf-8", errors="ignore")
+vars_in_compose = sorted(set(re.findall(r"\$\{([A-Z0-9_]+)\}", compose)))
 
-def vars_in_compose(path):
-    with open(path,'r',encoding='utf-8') as f:
-        data=f.read()
-    return set(re.findall(r'\$\{([A-Z0-9_]+)\}', data))
+env_example = (root / ".env.example").read_text(encoding="utf-8", errors="ignore")
+env_vars = set()
+for line in env_example.splitlines():
+    line = line.strip()
+    if not line or line.startswith("#"):
+        continue
+    if "=" in line:
+        env_vars.add(line.split("=", 1)[0].strip())
 
-def main():
-    missing = set()
-    env = parse_env(ENV_FILE)
-    used = vars_in_compose(COMPOSE_FILE)
-    missing = used - env
-    if missing:
-        print('Missing variables in .env.example:', ', '.join(sorted(missing)))
-        sys.exit(1)
-    print('All compose variables exist in .env.example.')
-    sys.exit(0)
+missing = [v for v in vars_in_compose if v not in env_vars]
+if missing:
+    print("ERROR: Missing variables in .env.example:", ", ".join(missing))
+    sys.exit(1)
 
-if __name__=='__main__':
-    try:
-        import yaml  # noqa: F401 (ensures PyYAML available if later needed)
-    except Exception:
-        pass
-    main()
+print("OK: .env.example contains all variables used by docker-compose.yml")
