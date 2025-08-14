@@ -1,7 +1,7 @@
 # FreeNETvpn
 
 One-command deploy of multiple VPN services on Ubuntu (22.04/24.04 LTS):
-- IPsec IKEv2 (strongSwan)
+- IPsec IKEv2 (strongSwan, EAP-MSCHAPv2; own CA + server cert)
 - L2TP/IPsec (xl2tpd + strongSwan)
 - WireGuard (wg-easy)
 - Outline (outline-server)
@@ -9,54 +9,43 @@ One-command deploy of multiple VPN services on Ubuntu (22.04/24.04 LTS):
 - Amnezia (official docker server, AmneziaWG)
 
 **Unified control panel**:
-- CLI panel (`menu.sh`) with multi-language (English/Russian).
-- Web dashboard (`/admin`) served behind Caddy + Let's Encrypt (prod). Basic Auth is set during install.
-- `/wg` exposes wg-easy UI; `/outline` — access to local Outline endpoints; `/docs` — local help.
+- CLI panel (`menu.sh`, EN/RU) – manage users (WG, VLESS, IKEv2, L2TP), generate profiles, backups, diagnostics.
+- Web dashboard (`/admin`) behind Caddy + Let’s Encrypt (prod). Basic Auth set during install.
+- `/wg` – wg-easy UI; `/outline` – local Outline endpoints; `/docs` – local help.
 
 ## Quick start
-
-> **Run on a fresh Ubuntu server with a public IP and DNS A/AAAA records pointing to your FQDN.**
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/evdokimenkoiv/FreeNETvpn/main/install.sh)
 ```
 
-During install you will be asked for:
+### During install
 - Language (English/Russian)
-- FQDN (e.g. `vpn.example.com`)
-- E-mail for Let's Encrypt (prod)
-- Admin username/password for the web panel
-- Which services to install (default: **all**; you can deselect)
-- IPv6: auto-detected, you can enable/disable explicitly
-- WireGuard port: default 51820, choose custom or random allowed port
-- SSH hardening (recommended): change SSH port, enable fail2ban & UFW (default on), optionally disable password logins
+- FQDN & email for Let’s Encrypt
+- Admin login/password for web panel
+- Services to install (**default: all**)
+- IPv6: auto-detected (you can enable/disable explicitly)
+- WireGuard port: default 51820, or custom, or random allowed
+- SSH hardening: port change, disable password login, enable fail2ban & UFW (on by default)
+- **Optional SSH 2FA (TOTP)** with Google Authenticator
 
-After completion open `https://<your-domain>/` to access the panel.
-
-
-## Services & ports
-
-- 80/tcp, 443/tcp — Caddy (auto TLS with Let’s Encrypt, production)
-- 500/udp, 4500/udp — IPsec IKEv2/L2TP
-- 1701/udp — L2TP
-- 51820/udp — WireGuard (customizable/randomized)
-- Additional internal ports are proxied by Caddy.
+### After install
+Open `https://<your-domain>/` → `/admin` (BasicAuth) and `/wg`, `/outline`, `/docs`.  
+Run `./menu.sh` for advanced tasks.
 
 ## Regional resilience (RU/CN focus)
+- VLESS over **WebSocket+TLS** at randomized path (`VLESS_WS_PATH`), fronted by Caddy – looks like normal HTTPS.
+- Scripts to rotate VLESS UUID & path (`scripts/rotate_vless.sh`).
+- Split-tunneling & DNS options on clients.
 
-- VLESS over **WebSocket+TLS** at a randomizable path (fronted by Caddy), indistinguishable from normal HTTPS.
-- Ability to change paths/ports and regenerate VLESS/WG client files via menu.
-- Split-tunneling and DNS options in clients.
+## Security defaults
+- UFW + fail2ban. SSH port randomization (optional). Password logins off (optional).  
+- **IKEv2 uses own CA and server cert** (not Let’s Encrypt) – proper EKU/SAN for IPsec.  
+- Web endpoints are TLS‑terminated via Caddy/LE (prod).
 
 ## Backups & Restore
+- Create local backup via CLI or `/admin/backup`, download the archive.
+- Restore on a new server: `./restore.sh <backup.tar.gz>`.
 
-- From CLI panel you can **create a local backup** archive with configs/keys.
-- Download the archive via web `/admin` page.
-- Restore on a new server with: `restore.sh <backup.zip>`
-
-## Disclaimer
-
-- Use responsibly and according to your local laws. This project is for educational and administrative purposes.
-- Strong defaults are provided, but you are responsible for security of your infrastructure.
-
-
+## License
+MIT

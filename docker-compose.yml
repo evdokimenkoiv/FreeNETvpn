@@ -3,9 +3,7 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     networks: [frontend, backend]
-    ports:
-      - "80:80/tcp"
-      - "443:443/tcp"
+    ports: ["80:80/tcp","443:443/tcp"]
     environment:
       - DOMAIN=${DOMAIN}
       - LE_EMAIL=${LE_EMAIL}

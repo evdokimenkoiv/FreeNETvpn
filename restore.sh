@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ARCH="${1:-}"
-if [[ -z "$ARCH" || ! -f "$ARCH" ]]; then
-  echo "Usage: ./restore.sh <backup-archive.tar.gz>"
-  exit 1
-fi
+[[ -z "$ARCH" || ! -f "$ARCH" ]] && { echo "Usage: ./restore.sh <backup-archive.tar.gz>"; exit 1; }
 tar xzf "$ARCH"
-echo "Restored services/ and host/ from backup. Adjust .env and run: docker compose up -d"
+echo "Restored services/ and host/. Review .env and run: docker compose up -d"

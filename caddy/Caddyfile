@@ -1,0 +1,44 @@
+{
+  email {env.LE_EMAIL}
+}
+
+{env.DOMAIN} {
+  encode gzip
+
+  # Innocuous static site at root (camouflage)
+  handle_path /docs* {
+    root * /usr/share/caddy/site
+    file_server
+  }
+
+  handle_path /admin* {
+    basicauth {
+      {env.BASIC_USER} {env.BASIC_PASS}
+    }
+    reverse_proxy admin:8000
+  }
+
+  handle_path /wg* {
+    basicauth {
+      {env.BASIC_USER} {env.BASIC_PASS}
+    }
+    reverse_proxy wg-easy:51821
+  }
+
+  handle_path /outline* {
+    basicauth {
+      {env.BASIC_USER} {env.BASIC_PASS}
+    }
+    reverse_proxy outline:8081
+  }
+
+  handle_path {env.VLESS_WS_PATH}* {
+    reverse_proxy xray:10000
+  }
+
+  # Default route — show docs index (looks like a normal site)
+  handle {
+    root * /usr/share/caddy/site
+    file_server
+  }
+}
