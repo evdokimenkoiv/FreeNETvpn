@@ -19,19 +19,16 @@ jobs:
           shellcheck -x install.sh menu.sh restore.sh scripts/**/*.sh || true
 
   lint-yaml:
-    name: Lint YAML
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ibiqlik/action-yamllint@v3
-        with:
-          file_or_dir: |
-            docker-compose.yml
-            .github/workflows/**/*.yml
-          config_file: |
-            extends: default
-            rules:
-              line-length: disable
+  name: Lint YAML
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: ibiqlik/action-yamllint@v3
+      with:
+        file_or_dir: |
+          docker-compose.yml
+          .github/workflows
+        config_file: .yamllint
 
   build-admin:
     name: Build admin image
