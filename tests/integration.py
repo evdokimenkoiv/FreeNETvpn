@@ -193,6 +193,10 @@ def main():
         # Remove only disposable probe containers: production backups handle the
         # configured services, never these CI-only Compose overrides.
         dc("rm", "-s", "-f", "xray-client", "wg-client", "echo-server")
+        # Client mutations render the production Caddy config. A container start
+        # remounts that file; restore only this test's private-CA override before
+        # exercising backup/recovery (public ACME cannot issue for .test).
+        manage.atomic_write(runtime / "Caddyfile", caddy, 0o644)
         submitted = json.loads(web("/admin/api/jobs", body={"operation": "backup.create", "request_id": str(uuid.uuid4())}, headers=csrf, expected=202))
         for _ in range(90):
             try:
