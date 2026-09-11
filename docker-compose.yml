@@ -68,6 +68,53 @@ services:
       - ./runtime/xray.json:/etc/xray/config.json:ro
     networks: [backend]
 
+  ipsec:
+    build: ./services/ipsec
+    profiles: [ikev2, l2tp]
+    restart: unless-stopped
+    cap_add: [NET_ADMIN]
+    devices: [/dev/ppp:/dev/ppp]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.accept_redirects: "0"
+      net.ipv4.conf.all.send_redirects: "0"
+    env_file: ./runtime/ipsec.env
+    ports: ["500:500/udp", "4500:4500/udp"]
+    volumes:
+      - ./runtime/ipsec:/config:ro
+      - ./data/ipsec:/etc/ipsec.d
+    networks: [backend]
+
+  outline:
+    image: quay.io/outline/shadowbox@sha256:545c6f7c7261bb30ae1dffe24a6fca5f8512f5d17c72cfb9e410e7e655444e62
+    profiles: [outline]
+    restart: unless-stopped
+    env_file: ./runtime/outline.env
+    environment:
+      SB_STATE_DIR: /data
+      SB_API_PORT: "9090"
+      SB_CERTIFICATE_FILE: /data/api.crt
+      SB_PRIVATE_KEY_FILE: /data/api.key
+      SB_METRICS_URL: ""
+    ports:
+      - "127.0.0.1:${OUTLINE_API_PORT:-19090}:9090/tcp"
+      - "${OUTLINE_PORT:-2443}:${OUTLINE_PORT:-2443}/tcp"
+      - "${OUTLINE_PORT:-2443}:${OUTLINE_PORT:-2443}/udp"
+    volumes: ["./data/outline:/data"]
+    networks: [backend]
+
+  amnezia:
+    build: ./services/amnezia
+    profiles: [amnezia]
+    restart: unless-stopped
+    cap_add: [NET_ADMIN]
+    devices: [/dev/net/tun:/dev/net/tun]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    ports: ["${AWG_PORT:-51830}:${AWG_PORT:-51830}/udp"]
+    volumes: ["./runtime/amnezia:/config:ro"]
+    networks: [backend]
+
 networks:
   backend: {}
 volumes:

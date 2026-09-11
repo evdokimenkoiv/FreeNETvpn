@@ -24,7 +24,7 @@ PASSWORD = "correct horse battery staple"
 
 @pytest.fixture
 def config():
-    return dict(CONFIG_VERSION="2", DOMAIN="vpn.example.test", WG_DOMAIN="wg.example.test",
+    return dict(**manage.PORT_DEFAULTS, CONFIG_VERSION="2", DOMAIN="vpn.example.test", WG_DOMAIN="wg.example.test",
                 LE_EMAIL="admin@example.test", ADMIN_USER="admin", ADMIN_PASSWORD_HASH=manage.password_hash(PASSWORD),
                 WG_PORT="52999", DNS1="1.1.1.1", DNS2="8.8.8.8", COMPOSE_PROFILES="wireguard,vless",
                 VLESS_UUID="9ab3b0aa-4a2b-44b7-acd4-5a644eec3c89", VLESS_WS_PATH="/assets-testpath123")
@@ -104,7 +104,7 @@ def test_legacy_config_is_not_overwritten(tmp_path):
     ("DOMAIN", "example.com\nreverse_proxy bad:8000"),
     ("WG_DOMAIN", "https://wg.example.com/path"),
     ("WG_PORT", "65536"), ("WG_PORT", "22"),
-    ("COMPOSE_PROFILES", "all"), ("COMPOSE_PROFILES", "vless,outline"),
+        ("COMPOSE_PROFILES", "all"), ("COMPOSE_PROFILES", "vless,unknown"),
     ("VLESS_UUID", "${VLESS_UUID}"), ("VLESS_WS_PATH", "/admin"),
     ("LE_EMAIL", "$(id)@example.com"), ("DNS1", "1.1.1.1;id"),
 ])

@@ -20,8 +20,8 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y shellcheck
-          for file in install.sh menu.sh restore.sh scripts/*.sh; do bash -n "$file"; done
-          shellcheck --severity=warning --external-sources --exclude=SC1091 install.sh menu.sh restore.sh scripts/*.sh
+          for file in install.sh menu.sh restore.sh scripts/*.sh services/*/*.sh; do bash -n "$file"; done
+          shellcheck --severity=warning --external-sources --exclude=SC1091 install.sh menu.sh restore.sh scripts/*.sh services/*/*.sh
   linux-integration:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -41,3 +41,25 @@ jobs:
       - name: Container status on failure
         if: failure()
         run: docker ps -a
+  extra-protocols:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Enable IPsec, PPP and TUN
+        run: |
+          sudo modprobe af_key
+          sudo modprobe ppp_generic
+          sudo modprobe ppp_async
+          sudo modprobe l2tp_ppp
+          sudo modprobe tun
+          test -c /dev/ppp || sudo mknod /dev/ppp c 108 0
+      - name: Actual IKEv2, L2TP, Outline and AmneziaWG traffic
+        run: python tests/integration_extra.py

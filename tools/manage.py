@@ -20,9 +20,10 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import urlencode
 
 ROOT = Path(__file__).resolve().parents[1]
-SUPPORTED = {"wireguard", "vless"}
+SUPPORTED = {"wireguard", "vless", "ikev2", "l2tp", "outline", "amnezia"}
+PORT_DEFAULTS = {"AWG_PORT": "51830", "OUTLINE_PORT": "2443", "OUTLINE_API_PORT": "19090"}
 KEYS = {"CONFIG_VERSION", "DOMAIN", "WG_DOMAIN", "LE_EMAIL", "ADMIN_USER", "ADMIN_PASSWORD_HASH",
-        "WG_PORT", "DNS1", "DNS2", "COMPOSE_PROFILES", "VLESS_UUID", "VLESS_WS_PATH"}
+        "WG_PORT", "DNS1", "DNS2", "COMPOSE_PROFILES", "VLESS_UUID", "VLESS_WS_PATH", *PORT_DEFAULTS}
 
 
 def parse_env(text):
@@ -42,6 +43,7 @@ def parse_env(text):
 
 
 def validate(config):
+    config = {**PORT_DEFAULTS, **config}
     if config.get("CONFIG_VERSION") != "2":
         raise ValueError("Legacy configuration: follow docs/migration.md; existing files were not overwritten")
     missing = KEYS - config.keys()
@@ -63,7 +65,12 @@ def validate(config):
         raise ValueError("WG_PORT must be between 1024 and 65535")
     profiles = config["COMPOSE_PROFILES"].split(",")
     if not profiles or any(p not in SUPPORTED for p in profiles) or len(profiles) != len(set(profiles)):
-        raise ValueError("Supported profiles: wireguard,vless; see docs/migration.md for legacy services")
+        raise ValueError("Supported profiles: " + ",".join(sorted(SUPPORTED)))
+    for key in PORT_DEFAULTS:
+        if not config[key].isdigit() or not 1024 <= int(config[key]) <= 65535:
+            raise ValueError(f"{key} must be between 1024 and 65535")
+    if len({int(config[k]) for k in ("WG_PORT", *PORT_DEFAULTS)}) != 4:
+        raise ValueError("VPN and management ports must be distinct")
     for key in ("DNS1", "DNS2"):
         ipaddress.IPv4Address(config[key])
     if str(uuid.UUID(config["VLESS_UUID"])) != config["VLESS_UUID"]:
@@ -125,7 +132,7 @@ def configure(args, root=ROOT):
 
 
 def render(config, root=ROOT):
-    validate(config)
+    config = validate(config)
     runtime = root / "runtime"
     runtime.mkdir(exist_ok=True)
     os.chmod(runtime, 0o700)
@@ -152,6 +159,8 @@ def render(config, root=ROOT):
     if "wireguard" in services:
         caddy += f"\n{config['WG_DOMAIN']} {{\n  forward_auth admin:8000 {{\n    uri /auth\n  }}\n  reverse_proxy wg-easy:51821\n}}\n"
     atomic_write(runtime / "Caddyfile", caddy, 0o644)
+    from protocols import render as render_protocols
+    render_protocols(config, root)
     print("Validated runtime configuration rendered")
 
 
@@ -283,7 +292,7 @@ def main():
         init.add_argument("--" + option)
     init.add_argument("--admin-user", default="admin")
     init.add_argument("--wg-port", type=int, default=51820)
-    init.add_argument("--services", default="wireguard,vless")
+    init.add_argument("--services", default="wireguard,vless,ikev2,l2tp,outline,amnezia")
     init.add_argument("--password-stdin", action="store_true")
     for command in ("validate", "render", "vless-uri", "backup", "rotate-vless"):
         subs.add_parser(command)
@@ -293,10 +302,30 @@ def main():
     comp.add_argument("args", nargs=argparse.REMAINDER)
     rest = subs.add_parser("restore")
     rest.add_argument("archive", type=Path)
+    subs.add_parser("prepare-protocols")
+    service_parser = subs.add_parser("services")
+    service_parser.add_argument("selection", help="Comma-separated protocols, or all")
+    client = subs.add_parser("client")
+    client.add_argument("action", choices=["add", "list", "export", "revoke"])
+    client.add_argument("protocol", choices=["ikev2", "l2tp", "outline", "amnezia"])
+    client.add_argument("name", nargs="?")
     args = parser.parse_args()
     try:
         if args.command == "configure":
             configure(args)
+        elif args.command in {"prepare-protocols", "client", "services"}:
+            import protocols
+            if args.command == "prepare-protocols":
+                protocols.prepare(read_config(), ROOT)
+            elif args.command == "services":
+                updated = dict(read_config(), COMPOSE_PROFILES=",".join(sorted(SUPPORTED)) if args.selection == "all" else args.selection)
+                validate(updated)
+                make_backup()
+                write_config(updated)
+                render(updated)
+                print("Selection saved; run sudo bash install.sh --existing")
+            else:
+                protocols.client(args.action, args.protocol, args.name, ROOT)
         elif args.command == "restore":
             restore(args.archive.resolve())
         elif args.command == "backup":

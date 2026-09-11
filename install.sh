@@ -43,7 +43,7 @@ for argument in "$@"; do
   esac
 done
 apt-get update
-apt-get install -y python3 ca-certificates curl gnupg ufw
+apt-get install -y python3 ca-certificates curl gnupg ufw openssl
 if [[ $existing -eq 1 ]]; then
   python3 tools/manage.py validate
   python3 tools/manage.py render
@@ -64,9 +64,18 @@ profiles="$(python3 tools/manage.py get COMPOSE_PROFILES)"
 if [[ ",$profiles," == *,wireguard,* ]]; then
   modprobe wireguard
 fi
+if [[ ",$profiles," == *,ikev2,* || ",$profiles," == *,l2tp,* ]]; then
+  modprobe af_key
+  modprobe ppp_generic
+  modprobe ppp_async
+  modprobe l2tp_ppp
+  [[ -c /dev/ppp ]] || mknod /dev/ppp c 108 0
+fi
+if [[ ",$profiles," == *,amnezia,* ]]; then modprobe tun; fi
+python3 tools/manage.py prepare-protocols
 python3 tools/manage.py compose config --quiet
 python3 tools/manage.py compose pull --ignore-buildable
-python3 tools/manage.py compose build --pull admin
+python3 tools/manage.py compose build --pull
 python3 tools/manage.py compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 if [[ ",$profiles," == *,vless,* ]]; then
   python3 tools/manage.py compose run --rm --no-deps xray run -test -config /etc/xray/config.json

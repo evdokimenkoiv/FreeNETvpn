@@ -22,5 +22,14 @@ profiles="$(manage get COMPOSE_PROFILES)"
 if [[ ",$profiles," == *,wireguard,* ]]; then
   ufw allow "$(manage get WG_PORT)/udp"
 fi
+if [[ ",$profiles," == *,ikev2,* || ",$profiles," == *,l2tp,* ]]; then
+  ufw allow 500/udp
+  ufw allow 4500/udp
+fi
+if [[ ",$profiles," == *,outline,* ]]; then
+  ufw allow "$(manage get OUTLINE_PORT)/tcp"
+  ufw allow "$(manage get OUTLINE_PORT)/udp"
+fi
+if [[ ",$profiles," == *,amnezia,* ]]; then ufw allow "$(manage get AWG_PORT)/udp"; fi
 ufw --force enable
 echo "Firewall rules added; SSH configuration and existing rules preserved."
