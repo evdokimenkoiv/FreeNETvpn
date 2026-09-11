@@ -103,7 +103,8 @@
         "verification": [
           "tests/test_regressions.py::test_administrative_routes_require_auth",
           "tests/integration.py",
-          "tests/bootstrap.sh"
+          "tests/bootstrap.sh",
+          "docs/vps-qualification.md"
         ],
         "status": "automated"
       },
@@ -235,7 +236,8 @@
           "docs/acceptance.md"
         ],
         "verification": [
-          "docs/acceptance.md"
+          "docs/acceptance.md",
+          "docs/vps-qualification.md"
         ],
         "status": "external"
       }

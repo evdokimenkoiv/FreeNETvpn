@@ -12,7 +12,7 @@ Constitution check: preserved credentials, no general command endpoint or public
 
 ## Technical context and project structure
 
-Python 3.12 for development/CI; stdlib management and Spec Kit helper scripts; FastAPI admin with pinned dependencies; Docker Compose and systemd on Ubuntu 22.04/24.04 x86_64 for runtime. Windows supports development checks, not the VPN server runtime. Sources live in tools/, admin/, services/ and scripts/; tests/ contains regression, browser and Linux traffic suites. No runtime dependency on Specify CLI.
+Python 3.12 for development/CI; stdlib management and Spec Kit helper scripts; FastAPI admin with pinned dependencies; Docker Compose and systemd on Ubuntu 22.04/24.04/26.04 x86_64 for runtime. Ubuntu 26.04 host qualification is recorded separately in docs/vps-qualification.md; the packet CI matrix remains 22.04/24.04. Windows supports development checks, not the VPN server runtime. Sources live in tools/, admin/, services/ and scripts/; tests/ contains regression, browser and Linux traffic suites. No runtime dependency on Specify CLI.
 
 ## Design artifacts
 

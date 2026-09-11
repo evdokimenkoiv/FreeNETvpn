@@ -34,7 +34,7 @@ Goal: deliver US3 as declared in spec.md (P1). Independent validation: `tests/te
 
 - [x] T007 Run failing regression, bootstrap, lint and Linux integration gates in `.github/workflows/ci.yml` (FR-007).
 
-- [ ] T008 Record independent VPS installation, DNS/public CA, egress, reboot and recovery acceptance (EXTERNAL — pending) in `docs/acceptance.md` (SC-005).
+- [ ] T008 Record independent VPS installation, DNS/public CA, egress, reboot and recovery acceptance (EXTERNAL — partial; native-client/full recovery checks remain open) in `docs/acceptance.md`, `docs/vps-qualification.md` (SC-005).
 
 ## Dependencies and delivery strategy
 

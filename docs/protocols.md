@@ -1,6 +1,6 @@
 # All six protocols
 
-New installations enable WireGuard, VLESS, IKEv2, L2TP/IPsec, Outline and AmneziaWG. Ubuntu 22.04/24.04 x86_64 is the baseline for the complete bundle. The pinned official Outline image is x86_64; select a subset without Outline on other architectures and validate that platform separately.
+New installations enable WireGuard, VLESS, IKEv2, L2TP/IPsec, Outline and AmneziaWG. Ubuntu 22.04/24.04/26.04 x86_64 is the baseline for the complete bundle. The pinned official Outline image is x86_64; select a subset without Outline on other architectures and validate that platform separately.
 
 ## Enable protocols on an existing v2 installation
 

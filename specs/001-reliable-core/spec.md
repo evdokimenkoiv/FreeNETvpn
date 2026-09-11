@@ -2,17 +2,17 @@
 
 > Исторический этап разработки. Актуальное расширение: [003 — кабинет и шаблоны](../003-dashboard-presets/spec.md). Ограничение «read-only panel» заменено разрешёнными операциями через локальный агент; требования сохранности данных и запрет общего command API действуют. Все шесть протоколов восстановлены в [этапе 002](../002-all-protocols/spec.md).
 
-Status: code and Linux integration verified; external VPS acceptance pending | Created: 2026-09-11
+Status: code and Linux integration verified; external VPS acceptance partial | Created: 2026-09-11
 
 ## Scope
 
-Original stage scope (protocol restoration is now delivered by 002; administrative writes by 003): repair the runnable core: WireGuard (wg-easy), VLESS over WebSocket/TLS, protected administration, installation, backup and recovery. Preserve historical integrations separately. IKEv2/L2TP/Outline/Amnezia are not advertised as working in this stabilization release; restoring all of them is a separate scope decision. No production server access was supplied.
+Original stage scope (protocol restoration is now delivered by 002; administrative writes by 003): repair the runnable core: WireGuard (wg-easy), VLESS over WebSocket/TLS, protected administration, installation, backup and recovery. Preserve historical integrations separately. IKEv2/L2TP/Outline/Amnezia are not advertised as working in this stabilization release; restoring all of them is a separate scope decision. At this original stage no production server access was supplied. Subsequent Ubuntu 26.04 deployment evidence and remaining limits are recorded in docs/vps-qualification.md.
 
 ## User scenarios and acceptance
 
 ### US1 — Install and open the panel (P1)
 
-**US1/AC1:** Given Ubuntu 22.04/24.04, a public IPv4, two DNS names and open HTTPS/UDP ports, installing creates the complete project, validates configuration, starts selected services and exposes authenticated HTTPS administration. Wrong/missing credentials return 401. SSH access settings remain unchanged.
+**US1/AC1:** Given Ubuntu 22.04/24.04/26.04, a public IPv4, two DNS names and open HTTPS/UDP ports, installing creates the complete project, validates configuration, starts selected services and exposes authenticated HTTPS administration. Wrong/missing credentials return 401. SSH access settings remain unchanged.
 
 ### US2 — Connect VPN clients (P1)
 
@@ -39,7 +39,7 @@ Original stage scope (protocol restoration is now delivered by 002; administrati
 - SC-002: A repeated configure operation leaves .env and representative client data byte-identical.
 - SC-003: CI obtains an HTTP payload through VLESS/TLS and through WireGuard, recording a nonzero handshake timestamp.
 - SC-004: The backup/restore regression preserves client state and secrets, and rejects malicious archives.
-- SC-005: An independent off-server client verifies DNS, public CA, UDP reachability and internet egress before production sign-off. External gate: pending.
+- SC-005: An independent off-server client verifies DNS, public CA, UDP reachability and internet egress before production sign-off. External gate: partially verified; full native-client and recovery acceptance remains open (docs/vps-qualification.md).
 
 ## Edge cases
 

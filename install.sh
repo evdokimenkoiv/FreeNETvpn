@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 umask 077
 if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
-  printf 'FreeNETvpn installer\nUsage: sudo bash install.sh [--existing] [--no-firewall]\nUbuntu 22.04/24.04 LTS x86_64, systemd, public IPv4 and two DNS names required.\nDownloaded entry: INSTALL_DIR=/opt/freenetvpn, FREENET_REF=main (override both with environment variables).\nAn existing installation is reused; update its code separately before --existing.\n'
+  printf 'FreeNETvpn installer\nUsage: sudo bash install.sh [--existing] [--no-firewall]\nUbuntu 22.04/24.04/26.04 LTS x86_64, systemd, public IPv4 and two DNS names required.\nDownloaded entry: INSTALL_DIR=/opt/freenetvpn, FREENET_REF=main (override both with environment variables).\nAn existing installation is reused; update its code separately before --existing.\n'
   exit 0
 fi
 [[ ${EUID} -eq 0 ]] || { echo "Run with sudo bash install.sh"; exit 1; }
@@ -39,8 +39,8 @@ cd "$source_dir"
 # OS metadata is trusted system configuration; user .env is parsed as data in Python.
 # shellcheck disable=SC1091
 source /etc/os-release
-[[ "$ID" == ubuntu && ( "$VERSION_ID" == 22.04 || "$VERSION_ID" == 24.04 ) ]] || {
-  echo "Supported systems: Ubuntu 22.04 and 24.04 LTS"; exit 1;
+[[ "$ID" == ubuntu && ( "$VERSION_ID" == 22.04 || "$VERSION_ID" == 24.04 || "$VERSION_ID" == 26.04 ) ]] || {
+  echo "Supported systems: Ubuntu 22.04, 24.04 and 26.04 LTS"; exit 1;
 }
 existing=0
 firewall=1

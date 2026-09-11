@@ -1,6 +1,6 @@
 # FreeNETvpn v2.1
 
-WireGuard (wg-easy 15.4.0), VLESS/WebSocket/gRPC/TLS (Xray 26.3.27), IKEv2, L2TP/IPsec, Outline and AmneziaWG, with an authenticated control panel behind Caddy 2.11.4. Ubuntu 22.04/24.04 LTS x86_64, Docker Compose v2, public IPv4.
+WireGuard (wg-easy 15.4.0), VLESS/WebSocket/gRPC/TLS (Xray 26.3.27), IKEv2, L2TP/IPsec, Outline and AmneziaWG, with an authenticated control panel behind Caddy 2.11.4. Ubuntu 22.04/24.04/26.04 LTS x86_64, Docker Compose plugin, public IPv4.
 
 All six protocol integrations are included. Existing installations are not overwritten; read [migration](docs/migration.md) and [protocol setup/client operations](docs/protocols.md). Amnezia integration means AmneziaWG with configuration export.
 
@@ -8,7 +8,7 @@ All six protocol integrations are included. Existing installations are not overw
 
 Текущая версия находится в [PR #1](https://github.com/evdokimenkoiv/FreeNETvpn/pull/1), ветка `codex/freenetvpn-reliability`. До слияния **не используйте `main` для новой установки этой версии**.
 
-Нужна Ubuntu **22.04/24.04 LTS x86_64** с systemd, публичным IPv4 и доступом sudo. Создайте два DNS A-записи (`vpn.example.com` и `wg.example.com`) на IP сервера. Откройте у провайдера TCP 80/443 и [порты выбранных VPN](docs/protocols.md); уберите неработающие AAAA-записи.
+Нужна Ubuntu **22.04/24.04/26.04 LTS x86_64** с systemd, публичным IPv4 и доступом sudo. Создайте два DNS A-записи (`vpn.example.com` и `wg.example.com`) на IP сервера. Откройте у провайдера TCP 80/443 и [порты выбранных VPN](docs/protocols.md); уберите неработающие AAAA-записи.
 
 Одна команда на чистом сервере устанавливает загрузчик, получает полный проект в `/opt/freenetvpn` и запускает интерактивное развёртывание:
 

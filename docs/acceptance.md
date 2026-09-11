@@ -1,6 +1,6 @@
 # External acceptance before production use
 
-Use a disposable Ubuntu 22.04/24.04 server and a client on a different network. Record OS, commit, image versions and results without publishing secrets.
+Use a disposable Ubuntu 22.04/24.04/26.04 server and a client on a different network. Record OS, commit, image versions and results without publishing secrets.
 
 1. Point DOMAIN and WG_DOMAIN directly to the public IPv4. Remove unusable AAAA records; permit inbound 80/443 TCP and every selected [VPN port](protocols.md) in the provider firewall. Do not use an HTTP-only CDN proxy for UDP VPN endpoints.
 2. Install using README instructions. Verify the installer fails explicitly for missing DNS/blocked HTTPS; valid setup must pass health_check.sh. Confirm a second SSH session can still connect on the original port and authentication method.
@@ -19,3 +19,5 @@ Use a disposable Ubuntu 22.04/24.04 server and a client on a different network. 
 13. Create a backup from the cabinet. Re-enter the session after services return if necessary, verify the operation finished and download the archive. Test expired sessions, forbidden cross-origin changes and an unavailable local agent. No dashboard response or job history should disclose backend tokens/passwords unless it is an explicit client export.
 
 CI verifies encrypted transport inside temporary Linux Docker networks using test certificates. It does not prove public UDP reachability, provider firewall behavior, public CA issuance, regional availability, native client UI imports or a full root installer run on the target VPS.
+
+Recorded Ubuntu 26.04 VPS results: [qualification report](vps-qualification.md). Partial evidence does not close the full external gate.
