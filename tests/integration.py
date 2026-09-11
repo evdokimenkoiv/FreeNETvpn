@@ -59,15 +59,6 @@ def main():
     (runtime / "compose.ci.yml").write_text('''services:
   caddy:
     ports: !override ["127.0.0.1:18443:443"]
-  wg-easy:
-    environment:
-      INIT_ENABLED: "true"
-      INIT_USERNAME: admin
-      INIT_PASSWORD: CI-only-password-123456789
-      INIT_HOST: wg-easy
-      INIT_PORT: "52999"
-      INIT_DNS: "1.1.1.1,8.8.8.8"
-      INIT_ALLOWED_IPS: "0.0.0.0/0"
   echo-server:
     image: python:3.12-slim
     working_dir: /srv
@@ -119,10 +110,17 @@ def main():
         tunnel = run(["curl", "-fsS", "--max-time", "20", "--socks5-hostname", "127.0.0.1:11080", "http://echo-server:18080/probe.txt"])
         assert tunnel.stdout == "freenetvpn-tunnel-ok"
         print("PASS: VLESS -> WebSocket -> validated TLS -> Caddy -> Xray -> HTTP payload", flush=True)
+        # Exercise the same protected first-run wizard used by a real installation.
+        assert json.loads(web("/api/setup/2", host=config["WG_DOMAIN"], auth=True,
+                              body={"username": "admin", "password": PASSWORD, "confirmPassword": PASSWORD}))["success"]
+        wg_id = dc("ps", "-q", "wg-easy").stdout.strip()
+        wg_ip = run(["docker", "inspect", "-f", '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', wg_id]).stdout.strip()
+        assert json.loads(web("/api/setup/4", host=config["WG_DOMAIN"], auth=True,
+                              body={"host": wg_ip, "port": 52999}))["success"]
         login = json.loads(web("/api/auth/password", host=config["WG_DOMAIN"], auth=True,
                                body={"username": "admin", "password": PASSWORD, "remember": False}))
         assert login["status"] == "success", login
-        peer = json.loads(web("/api/client", host=config["WG_DOMAIN"], auth=True, body={"name": "CI-test-client"}))
+        peer = json.loads(web("/api/client", host=config["WG_DOMAIN"], auth=True, body={"name": "CI-test-client", "expiresAt": None}))
         wireguard = web(f"/api/client/{peer['clientId']}/configuration", host=config["WG_DOMAIN"], auth=True)
         # Avoid changing the test container DNS; payload uses a literal IP.
         wireguard = "\n".join(line for line in wireguard.splitlines() if not line.startswith("DNS =")) + "\n"
@@ -140,7 +138,8 @@ def main():
         logs = dc("logs", "--tail", "60", check=False)
         print(logs.stdout, flush=True)
         # Fixed disposable CI project only. The production installer never deletes volumes.
-        dc("--profile", "test-client", "down", "--volumes", "--remove-orphans", check=False)
+        dc("--profile", "wireguard", "--profile", "vless", "--profile", "test-client",
+           "down", "--volumes", "--remove-orphans", check=False)
 
 
 if __name__ == "__main__":

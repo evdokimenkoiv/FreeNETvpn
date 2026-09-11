@@ -32,6 +32,14 @@ services:
     image: ghcr.io/wg-easy/wg-easy:15.4.0
     profiles: [wireguard]
     restart: unless-stopped
+    # UI readiness must work before the operator completes the first-run wizard.
+    # A WireGuard handshake is checked separately by integration/acceptance tests.
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:51821/').then(r=>{if(r.status>=500)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     environment:
       INSECURE: "false"
       DISABLE_IPV6: "true"

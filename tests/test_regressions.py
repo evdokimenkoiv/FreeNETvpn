@@ -150,6 +150,7 @@ def test_compose_ports_and_privileges():
     assert any(p.endswith("/udp") for p in services["wg-easy"]["ports"])
     assert "ports" not in services["admin"] and "ports" not in services["xray"]
     assert "docker.sock" not in json.dumps(compose)
+    assert "fetch(" in json.dumps(services["wg-easy"]["healthcheck"])
 
 
 def test_backup_restore_roundtrip_preserves_credentials_and_state(deployment, config, tmp_path, monkeypatch):
@@ -188,3 +189,32 @@ def test_archive_traversal_and_links_rejected(tmp_path, name, link):
     with tarfile.open(path, "r:gz") as archive:
         with pytest.raises(ValueError, match="Unsafe"):
             manage.checked_members(archive)
+
+
+def test_rotation_restores_original_configuration_on_validation_failure(deployment, config, monkeypatch):
+    monkeypatch.setattr(manage, "make_backup", lambda root: None)
+    calls = []
+    def failing_compose(args, root):
+        calls.append(args)
+        if args[0] == "run":
+            raise subprocess.CalledProcessError(1, args)
+    monkeypatch.setattr(manage, "compose", failing_compose)
+    with pytest.raises(subprocess.CalledProcessError):
+        manage.rotate_vless(deployment)
+    assert manage.read_config(deployment) == config
+    assert json.loads((deployment / "runtime/xray.json").read_text())["inbounds"][0]["settings"]["clients"][0]["id"] == config["VLESS_UUID"]
+    assert calls[-1][-2:] == ["caddy", "xray"]
+
+
+def test_services_resume_even_if_backup_fails(deployment, monkeypatch):
+    calls = []
+    def fake_compose(args, root, **kwargs):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "admin\nxray\n", "")
+    monkeypatch.setattr(manage, "compose", fake_compose)
+    def fail_archive(*args, **kwargs):
+        raise OSError("Disk full")
+    monkeypatch.setattr(tarfile, "open", fail_archive)
+    with pytest.raises(OSError, match="Disk full"):
+        manage.make_backup(deployment)
+    assert calls[-1] == ["start", "admin", "xray"]
