@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-read -rp "L2TP username: " U
-read -rsp "Password: " P; echo
-echo "${U} * ${P} *" >> /etc/ppp/chap-secrets
-systemctl restart xl2tpd || true
-echo "User ${U} added."
+echo "Legacy integration is not enabled in version 2. See docs/migration.md." >&2
+exit 1

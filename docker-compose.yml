@@ -1,116 +1,66 @@
+name: freenetvpn
 services:
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.11.4-alpine
     restart: unless-stopped
-    networks:
-      - frontend
-      - backend
     ports:
       - "80:80/tcp"
       - "443:443/tcp"
-    environment:
-      - DOMAIN=${DOMAIN}
-      - LE_EMAIL=${LE_EMAIL}
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
+      - ./runtime/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/site:/srv/site:ro
+      - ./data/caddy:/data
       - caddy_config:/config
-      - ./caddy/site:/usr/share/caddy/site:ro
+    networks: [backend]
+    depends_on:
+      admin:
+        condition: service_healthy
 
   admin:
     build: ./admin
     restart: unless-stopped
-    networks:
-      - backend
-    environment:
-      - BASIC_USER=${ADMIN_USER}
-      - BASIC_PASS=${ADMIN_PASS}
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./services:/srv/services:ro
-      - ./host:/srv/host:ro
-      - ./backups:/srv/backups
-    labels:
-      caddy: ${DOMAIN}
-      caddy.route.0: "/admin*"
-      caddy.route.0.reverse_proxy: "{{upstreams 8000}}"
-      caddy.route.0.basicauth: "* {env.BASIC_USER} {env.BASIC_PASS}"
+      - ./runtime/admin.json:/run/freenet/admin.json:ro
+      - ./backups:/srv/backups:ro
+    networks: [backend]
 
   wg-easy:
-    image: weejewel/wg-easy
+    image: ghcr.io/wg-easy/wg-easy:15.4.0
+    profiles: [wireguard]
     restart: unless-stopped
-    networks:
-      - backend
     environment:
-      - WG_HOST=${DOMAIN}
-      - PASSWORD=${ADMIN_PASS}
-      - WG_PORT=${WG_PORT}
-      - WG_DEFAULT_DNS=${DNS1},${DNS2}
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
+      INSECURE: "false"
+      DISABLE_IPV6: "true"
+      HOST: "0.0.0.0"
+      PORT: "51821"
+    ports:
+      - "${WG_PORT:?Run tools/manage.py configure}:${WG_PORT}/udp"
+    cap_add: [NET_ADMIN, SYS_MODULE]
     sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.src_valid_mark: "1"
     volumes:
-      - wg_data:/etc/wireguard
-    labels:
-      caddy: ${DOMAIN}
-      caddy.route.1: "/wg*"
-      caddy.route.1.reverse_proxy: "{{upstreams 51821}}"
-      caddy.route.1.basicauth: "* {env.BASIC_USER} {env.BASIC_PASS}"
-
-  outline:
-    image: quay.io/outline/shadowbox:${OUTLINE_DOCKER_TAG}
-    restart: unless-stopped
-    networks:
-      - backend
-    environment:
-      - SB_API_PREFIX=/outline
-    volumes:
-      - outline_data:/root/shadowbox
-    labels:
-      caddy: ${DOMAIN}
-      caddy.route.2: "/outline*"
-      caddy.route.2.reverse_proxy: "{{upstreams 8081}}"
-      caddy.route.2.basicauth: "* {env.BASIC_USER} {env.BASIC_PASS}"
+      - ./data/wireguard:/etc/wireguard
+      - /lib/modules:/lib/modules:ro
+    networks: [backend]
 
   xray:
-    image: teddysun/xray
+    image: ghcr.io/xtls/xray-core:26.3.27
+    profiles: [vless]
     restart: unless-stopped
-    networks:
-      - backend
-    environment:
-      - VLESS_UUID=${VLESS_UUID}
-      - VLESS_WS_PATH=${VLESS_WS_PATH}
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    command: ["run", "-config", "/etc/xray/config.json"]
     volumes:
-      - ./services/xray/config.json:/etc/xray/config.json:ro
-    command: ["-config", "/etc/xray/config.json"]
-    labels:
-      caddy: ${DOMAIN}
-      caddy.route.3: "${VLESS_WS_PATH}*"
-      caddy.route.3.reverse_proxy: "{{upstreams 10000}}"
-
-  amnezia:
-    image: amnezia/amo:${AMNEZIA_DOCKER_TAG}
-    restart: unless-stopped
-    networks:
-      - backend
-    volumes:
-      - amnezia_data:/opt/amnezia
-    labels:
-      caddy: ${DOMAIN}
-      caddy.route.4: "/amnezia*"
-      caddy.route.4.reverse_proxy: "{{upstreams 5000}}"
-      caddy.route.4.basicauth: "* {env.BASIC_USER} {env.BASIC_PASS}"
+      - ./runtime/xray.json:/etc/xray/config.json:ro
+    networks: [backend]
 
 networks:
-  frontend: {}
   backend: {}
-
 volumes:
-  caddy_data: {}
   caddy_config: {}
-  wg_data: {}
-  outline_data: {}
-  amnezia_data: {}

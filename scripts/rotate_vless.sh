@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-set -euo pipefail
-NEW_UUID=$(cat /proc/sys/kernel/random/uuid)
-NEW_PATH="/assets-$(tr -dc a-z </dev/urandom | head -c 6)"
-sed -i "s|^VLESS_UUID=.*|VLESS_UUID=${NEW_UUID}|" .env
-sed -i "s|^VLESS_WS_PATH=.*|VLESS_WS_PATH=${NEW_PATH}|" .env
-docker compose up -d xray caddy
-echo "Rotated VLESS to UUID=${NEW_UUID}, path=${NEW_PATH}"
+set -Eeuo pipefail
+# shellcheck source=scripts/common.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
+[[ ${EUID} -eq 0 ]] || { echo "Run as root"; exit 1; }
+[[ "${1:-}" == --confirm ]] || {
+  echo "Rotation disconnects current VLESS clients. Use --confirm to back up and rotate."; exit 1;
+}
+manage rotate-vless
