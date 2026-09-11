@@ -1,5 +1,7 @@
 # Reliable FreeNETvpn core
 
+> Исторический этап разработки. Актуальное расширение: [003 — кабинет и шаблоны](../003-dashboard-presets/spec.md). Ограничение «read-only panel» заменено разрешёнными операциями через локальный агент; требования сохранности данных и запрет общего command API действуют. Все шесть протоколов восстановлены в [этапе 002](../002-all-protocols/spec.md).
+
 Status: code and Linux integration verified; external VPS acceptance pending | Created: 2026-09-11
 
 ## Scope

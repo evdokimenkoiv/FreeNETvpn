@@ -1,5 +1,7 @@
 # Implementation plan
 
+> Исторический этап разработки. Актуальное расширение: [003 — кабинет и шаблоны](../003-dashboard-presets/spec.md). Ограничение «read-only panel» заменено разрешёнными операциями через локальный агент; требования сохранности данных и запрет общего command API действуют. Все шесть протоколов восстановлены в [этапе 002](../002-all-protocols/spec.md).
+
 ## Architecture
 
 Caddy terminates HTTPS and preserves /admin and VLESS WebSocket paths. FastAPI supplies read-only administration and a forward-auth endpoint for the separate wg-easy hostname. Password verification uses PBKDF2-SHA256. No Docker socket is mounted in the panel.

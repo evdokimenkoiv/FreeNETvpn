@@ -31,6 +31,7 @@ class Controller:
     def __init__(self, root, worker=True):
         self.root = root
         self.lock = threading.RLock()
+        self.wg_lock = threading.RLock()
         self.queue = queue.Queue(maxsize=32)
         self.path = root / "data/control/jobs.json"
         self.jobs = json.loads(self.path.read_text()) if self.path.exists() else []
@@ -105,6 +106,12 @@ class Controller:
             self.queue.task_done()
 
     def wg_api(self, action, name=None, credentials=None):
+        # wg-easy login writes SQLite session state. Snapshot polling and a
+        # background client job must not open concurrent native transactions.
+        with self.wg_lock:
+            return self._wg_api(action, name, credentials)
+
+    def _wg_api(self, action, name=None, credentials=None):
         state = protocols.read_state(self.root)
         credentials = credentials or state.get("wireguard_credentials")
         if not credentials:

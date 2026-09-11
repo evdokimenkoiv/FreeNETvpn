@@ -16,12 +16,14 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pytest -q
+      - name: Downloaded installer bootstrap
+        run: sudo bash tests/bootstrap.sh
       - name: Shell syntax and lint
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y shellcheck
-          for file in install.sh menu.sh restore.sh scripts/*.sh services/*/*.sh; do bash -n "$file"; done
-          shellcheck --severity=warning --external-sources --exclude=SC1091 install.sh menu.sh restore.sh scripts/*.sh services/*/*.sh
+          for file in install.sh menu.sh restore.sh scripts/*.sh services/*/*.sh tests/bootstrap.sh; do bash -n "$file"; done
+          shellcheck --severity=warning --external-sources --exclude=SC1091 install.sh menu.sh restore.sh scripts/*.sh services/*/*.sh tests/bootstrap.sh
   linux-integration:
     runs-on: ${{ matrix.os }}
     strategy:

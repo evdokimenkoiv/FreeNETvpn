@@ -117,6 +117,28 @@ def test_service_allowlist_and_snapshot_redaction(deployment, monkeypatch):
     assert "VLESS_UUID" not in json.dumps(snapshot) and "control_token" not in json.dumps(snapshot)
 
 
+def test_wireguard_poll_and_job_serialize_native_sqlite_sessions(deployment, monkeypatch):
+    import concurrent.futures
+    import time
+    (deployment / "tools").mkdir()
+    (deployment / "tools/wg_bridge.js").write_text("// fixed test adapter")
+    active = 0
+    maximum = 0
+    def compose(args, root, **kwargs):
+        nonlocal active, maximum
+        active += 1
+        maximum = max(maximum, active)
+        time.sleep(0.05)
+        active -= 1
+        return subprocess.CompletedProcess(args, 0, "[]", "")
+    monkeypatch.setattr(manage, "compose", compose)
+    controller = Controller(deployment, worker=False)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(controller.wg_api, "list", credentials={"username": "admin", "password": "test"}) for _ in range(2)]
+        assert [future.result() for future in futures] == [[], []]
+    assert maximum == 1
+
+
 @pytest.mark.parametrize("preset", ["ws-tls", "mobile-ws", "grpc-tls"])
 def test_vless_presets_lifecycle_and_legacy_survives(deployment, monkeypatch, preset):
     monkeypatch.setattr(manage, "compose", lambda *a, **k: None)

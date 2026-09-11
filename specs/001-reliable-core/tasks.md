@@ -1,5 +1,7 @@
 # Tasks and evidence
 
+> Исторический этап разработки. Актуальное расширение: [003 — кабинет и шаблоны](../003-dashboard-presets/spec.md). Ограничение «read-only panel» заменено разрешёнными операциями через локальный агент; требования сохранности данных и запрет общего command API действуют. Все шесть протоколов восстановлены в [этапе 002](../002-all-protocols/spec.md).
+
 - [x] T001 [US1] Establish principles and requirements in .specify/memory/constitution.md and specs/001-reliable-core/ (FR-008).
 - [x] T002 [US1] Add validated configuration and idempotent rendering in tools/manage.py (FR-001/002/004).
 - [x] T003 [US1] Repair admin authentication and read-only access in admin/app/main.py (FR-003).

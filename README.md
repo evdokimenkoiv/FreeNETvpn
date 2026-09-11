@@ -4,30 +4,29 @@ WireGuard (wg-easy 15.4.0), VLESS/WebSocket/gRPC/TLS (Xray 26.3.27), IKEv2, L2TP
 
 All six protocol integrations are included. Existing installations are not overwritten; read [migration](docs/migration.md) and [protocol setup/client operations](docs/protocols.md). Amnezia integration means AmneziaWG with configuration export.
 
-## Install
+## Быстрое развёртывание
 
-Create two DNS A records pointing directly at the server:
-- `vpn.example.com` — panel and VLESS, also the WireGuard client endpoint.
-- `wg.example.com` — protected wg-easy UI.
+Текущая версия находится в [PR #1](https://github.com/evdokimenkoiv/FreeNETvpn/pull/1), ветка `codex/freenetvpn-reliability`. До слияния **не используйте `main` для новой установки этой версии**.
 
-Allow TCP 80/443 and the selected [VPN ports](docs/protocols.md) in the hosting-provider firewall. Use working DNS and remove unusable AAAA records.
+Нужна Ubuntu **22.04/24.04 LTS x86_64** с systemd, публичным IPv4 и доступом sudo. Создайте два DNS A-записи (`vpn.example.com` и `wg.example.com`) на IP сервера. Откройте у провайдера TCP 80/443 и [порты выбранных VPN](docs/protocols.md); уберите неработающие AAAA-записи.
+
+Одна команда на чистом сервере устанавливает загрузчик, получает полный проект в `/opt/freenetvpn` и запускает интерактивное развёртывание:
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y git
-git clone https://github.com/evdokimenkoiv/FreeNETvpn.git
-cd FreeNETvpn
+sudo bash -c 'set -e; apt-get update -qq; apt-get install -y ca-certificates curl; export FREENET_REF=codex/freenetvpn-reliability; f=$(mktemp); trap "rm -f -- \"$f\"" EXIT; curl -fsSL "https://raw.githubusercontent.com/evdokimenkoiv/FreeNETvpn/${FREENET_REF}/install.sh" -o "$f"; bash "$f"'
+```
+
+Установщик спросит два домена, email для сертификата и пароль администратора (16+ символов). Сам установит Docker/Compose, подготовит шесть протоколов, кабинет и systemd-агент, проверит конфигурацию, HTTPS и защиту входа. DNS и firewall провайдера настраиваются заранее. Мастер WireGuard завершается после установки в браузере.
+
+Если полный проект уже скачан, единая команда из его каталога:
+
+```bash
 sudo bash install.sh
 ```
 
-The installer asks for both domains, a certificate email and a password (16+ characters). It preserves detected SSH ports before enabling UFW and **does not change SSH settings**. To manage your firewall yourself, use `--no-firewall`. It validates generated configurations and waits for HTTPS/authentication checks; a failure returns nonzero.
+`sudo bash install.sh --existing` повторно применяет существующую конфигурацию; `--no-firewall` оставляет управление UFW оператору. Установщик сохраняет обнаруженные SSH-порты и **не меняет настройки SSH**. `bash install.sh --help` доступен без sudo и ничего не устанавливает.
 
-The downloadable entry point also fetches a complete checkout (not just a shell file):
-```bash
-curl -fsSL https://raw.githubusercontent.com/evdokimenkoiv/FreeNETvpn/main/install.sh -o /tmp/freenet-install.sh
-sudo bash /tmp/freenet-install.sh
-```
-Defaults to /opt/freenetvpn; an existing target directory without a v2 project is refused.
+Повторный запуск загрузчика использует найденную установку и не обновляет её код автоматически. Для обновления Git- и архивной установок смотрите [инструкцию развёртывания и обновления](docs/deployment.md). Ошибка загрузки не оставляет частично установленный проект: повторите ту же команду.
 
 ## First connection
 
@@ -95,6 +94,8 @@ GitHub Actions also runs Chromium desktop/mobile cabinet tests with an explicitl
 GitHub Actions runs actual TLS, WireGuard, Xray, IPsec/PPP, Outline and AmneziaWG client/server packet tests on Ubuntu 22.04 and 24.04. `tests/integration.py` and `tests/integration_extra.py` are for an **empty disposable Linux checkout only**; they create test projects and remove their Docker volumes afterwards. TLS clients explicitly trust test certificates. The Outline probe uses a disposable bridge with a non-private address range so Outline's RFC1918 destination filtering remains enabled.
 
 Public CA issuance, external UDP, provider routing, DNS leaks, reboot/recovery and a full root installation on a VPS require [external acceptance](docs/acceptance.md). No blanket guarantee of availability through regional network filtering is made.
+
+Оценка Spec Kit и прослеживаемость требований: [assessment](docs/spec-kit-assessment.md), [матрица требований и проверок](docs/traceability.md).
 
 Spec Kit artifacts: [.specify/memory/constitution.md](.specify/memory/constitution.md), [specification](specs/001-reliable-core/spec.md), [plan](specs/001-reliable-core/plan.md), [tasks/evidence](specs/001-reliable-core/tasks.md).
 

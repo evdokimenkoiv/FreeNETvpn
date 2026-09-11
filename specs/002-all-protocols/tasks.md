@@ -1,5 +1,7 @@
 # Tasks and evidence
 
+> Исторический этап разработки. Актуальное расширение: [003 — кабинет и шаблоны](../003-dashboard-presets/spec.md). Ограничение «read-only panel» заменено разрешёнными операциями через локальный агент; требования сохранности данных и запрет общего command API действуют.
+
 - [x] Define scope and architecture for all protocols.
 - [x] Implement services, persistent configuration and client lifecycle.
 - [x] Pass configuration/client lifecycle regression tests.

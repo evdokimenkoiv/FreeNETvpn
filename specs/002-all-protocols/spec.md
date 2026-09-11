@@ -1,5 +1,7 @@
 # Restore all advertised VPN protocols
 
+> Исторический этап разработки. Актуальное расширение: [003 — кабинет и шаблоны](../003-dashboard-presets/spec.md). Ограничение «read-only panel» заменено разрешёнными операциями через локальный агент; требования сохранности данных и запрет общего command API действуют.
+
 User request: restore IKEv2, L2TP/IPsec, Outline and Amnezia alongside the verified WireGuard/VLESS core.
 
 ## Requirements
