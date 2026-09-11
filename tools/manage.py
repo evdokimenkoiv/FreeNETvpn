@@ -155,7 +155,7 @@ def render(config, root=ROOT):
             "outbounds": [{"protocol": "freedom", "tag": "direct"}]}
     atomic_write(runtime / "xray.json", json.dumps(xray, indent=2) + "\n", 0o644)
     caddy = f"{{\n  email {config['LE_EMAIL']}\n}}\n\n{config['DOMAIN']} {{\n"
-    caddy += '  @admin path /admin /admin/*\n  handle @admin {\n    reverse_proxy admin:8000\n  }\n'
+    caddy += '  @admin path /admin /admin/*\n  handle @admin {\n    request_body {\n      max_size 64KB\n    }\n    reverse_proxy admin:8000\n  }\n'
     if "vless" in services:
         caddy += f"  @vless path {config['VLESS_WS_PATH']}\n  handle @vless {{\n    reverse_proxy xray:10000\n  }}\n"
         caddy += f"  @grpc path /{presets.grpc_name(config)}/*\n  handle @grpc {{\n    reverse_proxy h2c://xray:10001\n  }}\n"

@@ -1,6 +1,6 @@
-# FreeNETvpn v2
+# FreeNETvpn v2.1
 
-WireGuard (wg-easy 15.4.0), VLESS/WebSocket/TLS (Xray 26.3.27), IKEv2, L2TP/IPsec, Outline and AmneziaWG, with an authenticated control panel behind Caddy 2.11.4. Ubuntu 22.04/24.04 LTS x86_64, Docker Compose v2, public IPv4.
+WireGuard (wg-easy 15.4.0), VLESS/WebSocket/gRPC/TLS (Xray 26.3.27), IKEv2, L2TP/IPsec, Outline and AmneziaWG, with an authenticated control panel behind Caddy 2.11.4. Ubuntu 22.04/24.04 LTS x86_64, Docker Compose v2, public IPv4.
 
 All six protocol integrations are included. Existing installations are not overwritten; read [migration](docs/migration.md) and [protocol setup/client operations](docs/protocols.md). Amnezia integration means AmneziaWG with configuration export.
 
@@ -31,11 +31,11 @@ Defaults to /opt/freenetvpn; an existing target directory without a v2 project i
 
 ## First connection
 
-Open `https://vpn.example.com/admin` with username `admin` and the password you supplied.
+Open `https://vpn.example.com/admin` with username `admin` and the password you supplied. The responsive cabinet manages clients, service operations, downloads/QR codes, backups and an operation history. See the [cabinet and preset guide](docs/dashboard.md). VLESS and AmneziaWG each include three ready-made client presets.
 
 For WireGuard, open `https://wg.example.com/`: first pass the same outer Basic Auth, then complete wg-easy's native setup. Create its native administrator account and set **endpoint = DOMAIN, port = WG_PORT**, DNS from .env. Create a client and import its QR/config. Two authentication layers protect the otherwise exposed first-run wizard. Changes to the UDP port must be made in both .env and the wg-easy UI.
 
-Export VLESS on the server:
+Create a named VLESS client in the cabinet and choose WebSocket/TLS, mobile WebSocket, or gRPC/TLS. The original profile remains available; export it on the server:
 ```bash
 sudo python3 tools/manage.py vless-uri
 ```
@@ -73,7 +73,7 @@ sudo bash scripts/rotate_vless.sh --confirm
 
 Rotation creates a backup, changes UUID/path, validates Xray/Caddy and recreates them. Validation/start errors restore old settings. Existing VLESS clients need the newly exported profile.
 
-Backups briefly stop running services, archive .env, runtime/ and data/, then resume the services even on failure. Archives contain secrets and private keys. Store them securely. The read-only web panel lists/downloads completed backups; it cannot execute Docker or host commands.
+Backups briefly stop running services, archive .env, runtime/ and data/, then resume the services even on failure. Archives contain secrets and private keys. Store them securely. The cabinet creates and downloads backups through an allowlisted local agent. The web container remains non-root/read-only and has no Docker socket or generic host-command API. A web restart may require signing in again; job results remain available.
 
 Restore to an **empty v2 installation**:
 ```bash
@@ -90,11 +90,15 @@ python -m pytest -q
 shellcheck -S warning -e SC1091 install.sh menu.sh restore.sh scripts/*.sh
 ```
 
+GitHub Actions also runs Chromium desktop/mobile cabinet tests with an explicitly simulated API; screenshots are uploaded as artifacts. The real systemd agent, service operations, backup/download and all six client presets are exercised separately against Linux containers.
+
 GitHub Actions runs actual TLS, WireGuard, Xray, IPsec/PPP, Outline and AmneziaWG client/server packet tests on Ubuntu 22.04 and 24.04. `tests/integration.py` and `tests/integration_extra.py` are for an **empty disposable Linux checkout only**; they create test projects and remove their Docker volumes afterwards. TLS clients explicitly trust test certificates. The Outline probe uses a disposable bridge with a non-private address range so Outline's RFC1918 destination filtering remains enabled.
 
 Public CA issuance, external UDP, provider routing, DNS leaks, reboot/recovery and a full root installation on a VPS require [external acceptance](docs/acceptance.md). No blanket guarantee of availability through regional network filtering is made.
 
 Spec Kit artifacts: [.specify/memory/constitution.md](.specify/memory/constitution.md), [specification](specs/001-reliable-core/spec.md), [plan](specs/001-reliable-core/plan.md), [tasks/evidence](specs/001-reliable-core/tasks.md).
+
+Dashboard and presets: [specification](specs/003-dashboard-presets/spec.md), [plan](specs/003-dashboard-presets/plan.md), [tasks/evidence](specs/003-dashboard-presets/tasks.md).
 
 All-protocol extension: [specification](specs/002-all-protocols/spec.md), [plan](specs/002-all-protocols/plan.md), [tasks/evidence](specs/002-all-protocols/tasks.md).
 

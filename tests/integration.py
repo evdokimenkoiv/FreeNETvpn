@@ -186,6 +186,32 @@ def main():
             rejected = run(["curl", "-fsS", "--max-time", "5", "--socks5-hostname", "127.0.0.1:11080", "http://echo-server:18080/probe.txt"], check=False)
             assert rejected.returncode != 0
             print("PASS: dashboard VLESS " + preset + " create, JSON/QR export, TLS payload and revoked-client rejection", flush=True)
+        job("service.stop", protocol="vless")
+        assert next(s for s in json.loads(web("/admin/api/overview"))["services"] if s["id"] == "vless")["state"] != "running"
+        job("service.start", protocol="vless")
+        assert next(s for s in json.loads(web("/admin/api/overview"))["services"] if s["id"] == "vless")["state"] == "running"
+        # Remove only disposable probe containers: production backups handle the
+        # configured services, never these CI-only Compose overrides.
+        dc("rm", "-s", "-f", "xray-client", "wg-client", "echo-server")
+        submitted = json.loads(web("/admin/api/jobs", body={"operation": "backup.create", "request_id": str(uuid.uuid4())}, headers=csrf, expected=202))
+        for _ in range(90):
+            try:
+                current = next(j for j in json.loads(web("/admin/api/overview", auth=True))["jobs"] if j["id"] == submitted["id"])
+                if current["status"] == "done":
+                    break
+                assert current["status"] not in {"failed", "interrupted"}, current
+            except (subprocess.CalledProcessError, AssertionError) as error:
+                if isinstance(error, AssertionError) and 'current' in locals() and current.get("status") in {"failed", "interrupted"}:
+                    raise
+            time.sleep(2)
+        else:
+            raise AssertionError("Backup did not resume the dashboard")
+        filename = current["result"]["filename"]
+        response = run(["curl", "-fsS", "--noproxy", "*", "--max-time", "30", "--cacert", "runtime/ci-ca.crt", "--resolve", "vpn.example.test:18443:127.0.0.1", "--user", f"admin:{PASSWORD}", "-o", "runtime/downloaded-backup.tar.gz", f"https://vpn.example.test:18443/admin/backups/{filename}"])
+        import tarfile
+        with tarfile.open(runtime / "downloaded-backup.tar.gz") as archive:
+            assert {".env", "data/control.token", "data/protocols.json"}.issubset(archive.getnames())
+        print("PASS: dashboard service stop/start and asynchronous backup, service recovery and authenticated archive download", flush=True)
     finally:
         print(run(["sudo", "journalctl", "-u", "freenetvpn-control", "--no-pager", "-n", "50"], check=False).stdout, flush=True)
         run(["sudo", "systemctl", "stop", "freenetvpn-control"], check=False)

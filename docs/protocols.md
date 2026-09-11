@@ -16,7 +16,7 @@ sudo bash install.sh --existing
 | Protocol | Public ports | Client |
 | --- | --- | --- |
 | WireGuard | WG_PORT UDP, default 51820 | WireGuard / wg-easy QR |
-| VLESS/WebSocket/TLS | 443 TCP | Compatible VLESS client |
+| VLESS/WebSocket/gRPC/TLS | 443 TCP | Compatible VLESS client |
 | IKEv2 | 500/4500 UDP | IKEv2 EAP-MSCHAPv2 with imported CA |
 | L2TP/IPsec | 500/4500 UDP | L2TP/IPsec PSK + MSCHAPv2 |
 | Outline | OUTLINE_PORT TCP/UDP, default 2443 | Outline access key |
@@ -26,7 +26,7 @@ TCP 80/443 is also needed for Caddy HTTPS. Outline's management port (`OUTLINE_A
 
 ## Client operations
 
-Use `sudo bash menu.sh` → 7, or:
+Use the [cabinet](dashboard.md) for client creation, exports, QR codes, revocation and VLESS/AWG presets. CLI: `sudo bash menu.sh` → 7, or:
 
 ```bash
 sudo python3 tools/manage.py client add ikev2 phone
@@ -38,11 +38,11 @@ sudo python3 tools/manage.py client export amnezia travel
 sudo python3 tools/manage.py client revoke amnezia travel
 ```
 
-`add` creates unique credentials, rejects duplicate names and prints the export file path. `export` preserves credentials. `revoke` removes the peer/account/key and its local export; IPsec/Amnezia recreation closes existing sessions and briefly interrupts other clients of that service. If recreation fails, the command fails; rerun `install.sh --existing` to apply the saved state. Keep exports private: they contain passwords or private keys.
+`add` creates unique credentials, rejects duplicate names and prints the export file path. `export` preserves credentials. `revoke` removes the peer/account/key and its local export; IPsec/Amnezia/VLESS recreation closes existing sessions and briefly interrupts other clients of that service. If recreation fails, the command fails; rerun `install.sh --existing` to apply the saved state. Keep exports private: they contain passwords or private keys.
 
 - **IKEv2:** `data/exports/ikev2/NAME.json` has server, remote ID, username/password; `ca.pem` is the server CA. Trust this CA in the VPN client, verify remote ID equals DOMAIN, and select EAP-MSCHAPv2. `NAME.mobileconfig` provides an Apple profile, including credentials and CA; platform import still requires operator validation. The initial CA is retained. A DOMAIN change requires deliberate certificate migration; the installer refuses a mismatched existing certificate.
 - **L2TP/IPsec:** `data/exports/l2tp/NAME.json` has server, PSK and PPP username/password. PSK is shared across this service; client passwords are unique. Uses IKEv1 for compatibility and is not offered by every current mobile OS. Windows behind NAT may require its native IPsec NAT-T policy setting. Prefer IKEv2 when multiple clients share one NAT. xl2tpd uses userspace L2TP with standard PPP modules.
-- **Outline:** `data/exports/outline/NAME.txt` contains the `ss://` key for Outline. Management is through the CLI, not an exposed Outline Manager API. Keep the configured data port stable once keys exist; changing it requires replacing existing keys and updating firewall mappings.
+- **Outline:** `data/exports/outline/NAME.txt` contains the `ss://` key for Outline. Management is through the cabinet or CLI; the Outline Manager API remains private. Keep the configured data port stable once keys exist; changing it requires replacing existing keys and updating firewall mappings.
 - **AmneziaWG:** `data/exports/amnezia/NAME.conf` includes matching packet obfuscation parameters. Import into an AmneziaWG configuration-compatible client. This is the AmneziaWG protocol, not the Amnezia desktop application's complete SSH/Docker management system. Builds use official AmneziaWG Go v3.1.20260828 and tools v3.1.20260812 commits; no custom host kernel module is installed.
 
 The original shell helper names for IKEv2/L2TP now call the managed v2 CLI. Originals remain in `legacy/` only as historical reference. The installer writes module-loading and PPP-device configuration for subsequent host boots; actual host reboot acceptance still needs a VPS test.
