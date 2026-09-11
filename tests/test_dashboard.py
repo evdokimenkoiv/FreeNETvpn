@@ -31,7 +31,10 @@ def login(browser):
 
 @pytest.mark.parametrize("path", ["session", "overview", "export?protocol=vless&name=legacy", "qr?protocol=vless&name=legacy"])
 def test_dashboard_data_is_private(browser, path):
-    assert browser.get("/admin/api/" + path).status_code == 401
+    response = browser.get("/admin/api/" + path)
+    assert response.status_code == 401
+    assert "www-authenticate" not in response.headers
+    assert "Basic" in browser.get("/auth").headers["www-authenticate"]
 
 
 def test_session_csrf_logout_and_secret_exclusion(browser, monkeypatch):

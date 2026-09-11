@@ -68,18 +68,21 @@ async def security_headers(request, call_next):
 
 def authenticated(request: Request, credentials: HTTPBasicCredentials | None = Depends(security)):
     config = app.state.config
+    # JSON API failures return the custom login screen, not a browser-native
+    # Basic Auth popup. Preserve that challenge for wg-easy forward_auth/CLI.
+    challenge = {} if request.url.path.startswith("/admin/api/") else {"WWW-Authenticate": 'Basic realm="FreeNETvpn"'}
     session = app.state.sessions.get(request.cookies.get("freenet_session", ""))
     if session and session["expires"] > time.time():
         request.state.auth_mode = "session"
         request.state.session = session
         return config
     if credentials is None:
-        raise HTTPException(401, "Войдите в кабинет", headers={"WWW-Authenticate": 'Basic realm="FreeNETvpn"'})
+        raise HTTPException(401, "Войдите в кабинет", headers=challenge)
     # Evaluate both checks, including for a wrong username.
     username_ok = hmac.compare_digest(credentials.username.encode(), config["username"].encode())
     password_ok = verify_password(credentials.password, config["password_hash"])
     if not (username_ok and password_ok):
-        raise HTTPException(401, "Invalid credentials", headers={"WWW-Authenticate": 'Basic realm="FreeNETvpn"'})
+        raise HTTPException(401, "Invalid credentials", headers=challenge)
     request.state.auth_mode = "basic"
     return config
 
