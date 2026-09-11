@@ -16,7 +16,7 @@ Goal: deliver US1 as declared in spec.md (P1). Independent validation: `tests/te
 
 - [x] T003 [US1] Select a validated feature portably and document Python PATH/UTF-8 setup in `tools/spec_context.py`, `docs/spec-kit.md`, `.specify/.gitignore` (FR-402 US1/AC1).
 
-- [ ] T004 [US1] Run official prerequisite and task-template helpers for all four features on Windows and Ubuntu in `.github/workflows/ci.yml` (FR-401 FR-406 SC-401 US1/AC1).
+- [x] T004 [US1] Run official prerequisite and task-template helpers for all four features on Windows and Ubuntu in `.github/workflows/ci.yml` (FR-401 FR-406 SC-401 US1/AC1).
 
 ## Phase 4: US2
 
@@ -34,11 +34,11 @@ Goal: deliver US3 as declared in spec.md (P1). Independent validation: `tests/te
 
 - [x] T008 [US3] Implement a read-only stdlib audit with actionable errors and negative fixture coverage in `tools/spec_audit.py` (FR-405 SC-402 US3/AC1).
 
-- [ ] T009 [US3] Make CI fail on structural/contract drift while retaining VPN and browser checks in `.github/workflows/ci.yml` (FR-406 SC-403 US3/AC1).
+- [x] T009 [US3] Make CI fail on structural/contract drift while retaining VPN and browser checks in `.github/workflows/ci.yml` (FR-406 SC-403 US3/AC1).
 
 ## Phase 6: Polish
 
-- [ ] T010 Record actual agent analysis/implementation/convergence and publish the bounded ten-point assessment in `docs/spec-kit-assessment.md`, `docs/spec-kit-review.md` (FR-407 SC-404).
+- [x] T010 Record actual agent analysis/implementation/convergence and publish the bounded ten-point assessment in `docs/spec-kit-assessment.md`, `docs/spec-kit-review.md` (FR-407 SC-404).
 
 ## Dependencies and delivery strategy
 
@@ -47,3 +47,8 @@ Setup → foundation → stories in listed priority order → polish. The first 
 ## Independent work opportunities
 
 After foundation, each story’s test review can be performed independently of other stories. Do not run two mutations of tools/protocols.py or tools/control.py concurrently. No task is marked [P] because the implementation tasks share state or files; read-only reviews of each story’s independent test are the parallel examples.
+
+## Phase 7: Convergence
+
+- [x] T011 Reject malformed JSON field types with structured diagnostics in `tools/spec_audit.py` and regressions in `tests/test_spec_audit.py` per FR-405/SC-403 (partial).
+- [x] T012 Finalize current CI and agent convergence evidence in `docs/spec-kit-review.md` and `docs/spec-kit-assessment.md` per FR-407/SC-404 (partial).

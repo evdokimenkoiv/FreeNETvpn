@@ -786,7 +786,8 @@
         "ref": "FR-405",
         "tasks": [
           "T002",
-          "T008"
+          "T008",
+          "T011"
         ],
         "implementation": [
           "tests/test_spec_audit.py",
@@ -823,7 +824,8 @@
         "tasks": [
           "T002",
           "T006",
-          "T009"
+          "T009",
+          "T011"
         ],
         "implementation": [
           "tests/test_spec_audit.py",
@@ -960,7 +962,8 @@
         "ref": "FR-407",
         "tasks": [
           "T007",
-          "T010"
+          "T010",
+          "T012"
         ],
         "implementation": [
           "specs/traceability.json",
@@ -978,7 +981,8 @@
         "ref": "SC-404",
         "tasks": [
           "T007",
-          "T010"
+          "T010",
+          "T012"
         ],
         "implementation": [
           "specs/traceability.json",

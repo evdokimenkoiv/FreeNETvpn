@@ -1,5 +1,4 @@
 """Mutation tests: a green audit must not hide broken or fabricated evidence."""
-import importlib.util
 import json
 from pathlib import Path
 import shutil
@@ -83,6 +82,19 @@ def test_cli_failure_is_json_nonzero_and_read_only(checkout):
     assert result.returncode == 1
     assert json.loads(result.stdout)["ok"] is False
     assert before == {p.relative_to(checkout): p.read_bytes() for p in checkout.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("field,value", [("status", []), ("status", {}), ("verification", None), ("verification", 42)])
+def test_malformed_external_row_reports_error_instead_of_crashing(checkout, field, value):
+    path = checkout / "specs/traceability.json"
+    trace = json.loads(path.read_text(encoding="utf-8"))
+    row = next(r for r in trace["features"]["001-reliable-core"] if r["ref"] == "SC-005")
+    row[field] = value
+    path.write_text(json.dumps(trace), encoding="utf-8")
+    result = subprocess.run([sys.executable, str(ROOT / "tools/spec_audit.py"), "--root", str(checkout), "--json"], capture_output=True, text=True)
+    assert result.returncode == 1
+    assert result.stdout, result.stderr
+    assert any("SC-005" in error for error in json.loads(result.stdout)["errors"])
 
 
 def test_context_rejects_traversal_and_preserves_existing_pointer(checkout):

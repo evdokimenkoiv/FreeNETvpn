@@ -156,14 +156,15 @@ def audit(root):
                     continue
                 for value in values:
                     reference(value, where)
-            if row.get("status") not in {"automated", "external"}:
+            if not isinstance(row.get("status"), str) or row["status"] not in {"automated", "external"}:
                 problem(where, "invalid evidence status")
             if ref in external and row.get("status") != "external":
                 problem(where, "external gate relabeled as automated")
             if row.get("status") == "external":
                 if not any(ident in tasks and not tasks[ident][0] for ident in ids):
                     problem(where, "external gate must retain an unchecked task")
-                if "docs/acceptance.md" not in row.get("verification", []):
+                verification = row.get("verification")
+                if not isinstance(verification, list) or "docs/acceptance.md" not in verification:
                     problem(where, "external gate must reference docs/acceptance.md")
         for ref in sorted(requirements - seen):
             problem(prefix, f"unmapped requirement {ref}")
