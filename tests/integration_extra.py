@@ -213,6 +213,20 @@ conn probe
         assert payload.stdout == "freenet-extra-tunnel-ok"
         # Route management operations to this disposable Compose project only.
         manage.compose = lambda args, root, **kwargs: dc(*args)
+        import presets
+        for preset in presets.CATALOG["amnezia"]:
+            protocols.client("preset", "amnezia", "testclient", ROOT, preset=preset["id"])
+            current = protocols.read_state(ROOT)
+            assert current["clients"]["amnezia"]["testclient"]["private"] == state["clients"]["amnezia"]["testclient"]["private"]
+            exported = protocols.export_client("amnezia", "testclient", config, current, ROOT).read_text()
+            lines = [line for line in exported.splitlines() if not line.startswith(("Address =", "DNS =", "MTU ="))]
+            write("awg-client/awg0.conf", "\n".join(lines).replace(config["DOMAIN"], address("amnezia")) + "\n")
+            dc("restart", "awg-client")
+            eventually(lambda: dc("exec", "-T", "awg-client", "ip", "link", "set", "awg0", "mtu", str(preset["mtu"])))
+            dc("exec", "-T", "awg-client", "ip", "route", "replace", echo_ip + "/32", "dev", "awg0")
+            payload = eventually(lambda: dc("exec", "-T", "awg-client", "curl", "-fsS", "--max-time", "5", "--interface", "awg0", url))
+            assert payload.stdout == "freenet-extra-tunnel-ok"
+            print("PASS: AmneziaWG preset " + preset["id"] + " unchanged keys, handshake and HTTP payload", flush=True)
         protocols.client("revoke", "amnezia", "testclient", ROOT)
         assert not dc("exec", "-T", "amnezia", "awg", "show", "awg0", "peers").stdout.strip()
         rejected = dc("exec", "-T", "awg-client", "curl", "-fsS", "--max-time", "5", "--interface", "awg0", url, check=False)

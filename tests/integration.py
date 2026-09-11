@@ -1,5 +1,7 @@
 """Real TLS and VPN packet tests. Run ONLY in an empty disposable Linux checkout."""
 import json
+import base64
+import uuid
 import os
 import subprocess
 import sys
@@ -23,14 +25,17 @@ def dc(*args, check=True):
     return run(BASE + list(args), check=check)
 
 
-def web(path, host="vpn.example.test", auth=False, body=None, expected=200):
+def web(path, host="vpn.example.test", auth=False, body=None, expected=200, headers=None):
     args = ["curl", "-sS", "--noproxy", "*", "--max-time", "15", "--cacert", "runtime/ci-ca.crt",
             "--resolve", f"{host}:18443:127.0.0.1", "-w", "\n%{http_code}",
             "-b", "runtime/ci.cookies", "-c", "runtime/ci.cookies"]
     if auth:
         args += ["--user", f"admin:{PASSWORD}"]
     if body is not None:
-        args += ["-H", "Content-Type: application/json", "-H", f"Origin: https://{host}:18443", "-d", json.dumps(body)]
+        origin = f"https://{host}" if path.startswith("/admin/") else f"https://{host}:18443"
+        args += ["-H", "Content-Type: application/json", "-H", f"Origin: {origin}", "-d", json.dumps(body)]
+    for key, value in (headers or {}).items():
+        args += ["-H", f"{key}: {value}"]
     result = run(args + [f"https://{host}:18443{path}"])
     content, status = result.stdout.rsplit("\n", 1)
     assert int(status) == expected, (path, status, content[:500])
@@ -47,6 +52,9 @@ def main():
     manage.write_config(config)
     manage.render(config)
     runtime = ROOT / "runtime"
+    # Real unprivileged web container -> authenticated Unix socket -> host agent.
+    # CI invokes the same systemd unit installer used on production hosts.
+    run(["sudo", "bash", "scripts/install_control.sh"])
     caddy = (runtime / "Caddyfile").read_text()
     for host in (config["DOMAIN"], config["WG_DOMAIN"]):
         caddy = caddy.replace(host + " {", host + " {\n  tls internal")
@@ -137,7 +145,50 @@ def main():
         handshakes = dc("exec", "-T", "wg-client", "wg", "show", "wg0", "latest-handshakes").stdout.splitlines()
         assert any(int(line.split()[1]) > 0 for line in handshakes)
         print("PASS: WireGuard login, create/export client, real handshake and HTTP routed through wg0", flush=True)
+        session = json.loads(web("/admin/api/login", body={"username": "admin", "password": PASSWORD}))
+        csrf = {"X-CSRF-Token": session["csrf"]}
+
+        def job(operation, **fields):
+            submitted = json.loads(web("/admin/api/jobs", body=dict(operation=operation, request_id=str(uuid.uuid4()), **fields), headers=csrf, expected=202))
+            for _ in range(90):
+                overview = json.loads(web("/admin/api/overview"))
+                current = next(j for j in overview["jobs"] if j["id"] == submitted["id"])
+                if current["status"] == "done":
+                    return current
+                assert current["status"] not in {"failed", "interrupted"}, current
+                time.sleep(2)
+            raise AssertionError("Dashboard operation timed out")
+
+        web("/admin/api/jobs", body={"operation": "service.restart", "protocol": "vless"}, expected=403)
+        job("wireguard.connect", protocol="wireguard", username="admin", password=PASSWORD)
+        job("client.add", protocol="wireguard", name="dashboard-peer")
+        exported = json.loads(web("/admin/api/export?protocol=wireguard&name=dashboard-peer"))
+        assert "PrivateKey" in base64.b64decode(exported["content"]).decode()
+        job("client.revoke", protocol="wireguard", name="dashboard-peer")
+        assert not any(c["name"] == "dashboard-peer" for c in json.loads(web("/admin/api/overview"))["clients"])
+        print("PASS: dashboard session/CSRF, systemd Unix agent, native WireGuard create/export/revoke", flush=True)
+        for preset in ("ws-tls", "mobile-ws", "grpc-tls"):
+            job("client.add", protocol="vless", name="ci-" + preset, preset=preset)
+            exported = json.loads(web("/admin/api/export?protocol=vless&name=ci-" + preset + "&format=json"))
+            profile = json.loads(base64.b64decode(exported["content"]))
+            profile["inbounds"][0]["listen"] = "0.0.0.0"
+            outbound = profile["outbounds"][0]
+            outbound["settings"]["vnext"][0]["address"] = "caddy"
+            outbound["streamSettings"]["tlsSettings"]["certificates"] = [{"usage": "verify", "certificateFile": "/etc/xray/ca.crt"}]
+            (runtime / "xray-client.json").write_text(json.dumps(profile))
+            dc("up", "-d", "--force-recreate", "xray-client")
+            time.sleep(3)
+            packet = run(["curl", "-fsS", "--max-time", "20", "--socks5-hostname", "127.0.0.1:11080", "http://echo-server:18080/probe.txt"])
+            assert packet.stdout == "freenetvpn-tunnel-ok"
+            assert "<svg" in web("/admin/api/qr?protocol=vless&name=ci-" + preset)
+            job("client.revoke", protocol="vless", name="ci-" + preset)
+            dc("restart", "xray-client")
+            rejected = run(["curl", "-fsS", "--max-time", "5", "--socks5-hostname", "127.0.0.1:11080", "http://echo-server:18080/probe.txt"], check=False)
+            assert rejected.returncode != 0
+            print("PASS: dashboard VLESS " + preset + " create, JSON/QR export, TLS payload and revoked-client rejection", flush=True)
     finally:
+        print(run(["sudo", "journalctl", "-u", "freenetvpn-control", "--no-pager", "-n", "50"], check=False).stdout, flush=True)
+        run(["sudo", "systemctl", "stop", "freenetvpn-control"], check=False)
         logs = dc("logs", "--tail", "60", check=False)
         print(logs.stdout, flush=True)
         # Fixed disposable CI project only. The production installer never deletes volumes.

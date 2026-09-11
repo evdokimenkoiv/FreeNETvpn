@@ -26,6 +26,7 @@ services:
     volumes:
       - ./runtime/admin.json:/run/freenet/admin.json:ro
       - ./backups:/srv/backups:ro
+      - ${FREENET_CONTROL_DIR:-/run/freenetvpn}:/run/freenet-control:ro
     networks: [backend]
 
   wg-easy:

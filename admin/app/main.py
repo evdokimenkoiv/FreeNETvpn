@@ -1,4 +1,5 @@
-"""Read-only control panel. No Docker socket, shell execution or host mounts."""
+"""Authenticated dashboard; fixed operations go to a restricted local agent."""
+import base64
 import hashlib
 import hmac
 import html
@@ -6,16 +7,23 @@ import json
 import os
 import re
 import socket
+import secrets
+import time
+import io
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field, ConfigDict
 
-security = HTTPBasic()
+security = HTTPBasic(auto_error=False)
 CONFIG = Path(os.getenv("ADMIN_CONFIG", "/run/freenet/admin.json"))
 BACKUPS = Path(os.getenv("BACKUPS_DIR", "/srv/backups"))
+STATIC = Path(__file__).parent / "static"
+CONTROL_SOCKET = os.getenv("CONTROL_SOCKET", "/run/freenet-control/control.sock")
 
 
 def verify_password(password: str, encoded: str) -> bool:
@@ -36,20 +44,147 @@ async def lifespan(application):
     if not config.get("username") or not config.get("password_hash"):
         raise RuntimeError("Run tools/manage.py configure before starting the panel")
     application.state.config = config
+    application.state.sessions = {}
+    application.state.login_attempts = {}
     yield
 
 
 app = FastAPI(title="FreeNETvpn", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app.mount("/admin/assets", StaticFiles(directory=STATIC), name="assets")
 
 
-def authenticated(credentials: HTTPBasicCredentials = Depends(security)):
+@app.middleware("http")
+async def security_headers(request, call_next):
+    length = request.headers.get("content-length", "0")
+    if not length.isdigit():
+        return JSONResponse({"detail": "Invalid content length"}, status_code=400)
+    if int(length) > 65536:
+        return JSONResponse({"detail": "Request too large"}, status_code=413)
+    response = await call_next(request)
+    response.headers.update({"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
+    return response
+
+
+def authenticated(request: Request, credentials: HTTPBasicCredentials | None = Depends(security)):
     config = app.state.config
+    session = app.state.sessions.get(request.cookies.get("freenet_session", ""))
+    if session and session["expires"] > time.time():
+        request.state.auth_mode = "session"
+        request.state.session = session
+        return config
+    if credentials is None:
+        raise HTTPException(401, "Войдите в кабинет", headers={"WWW-Authenticate": 'Basic realm="FreeNETvpn"'})
     # Evaluate both checks, including for a wrong username.
     username_ok = hmac.compare_digest(credentials.username.encode(), config["username"].encode())
     password_ok = verify_password(credentials.password, config["password_hash"])
     if not (username_ok and password_ok):
         raise HTTPException(401, "Invalid credentials", headers={"WWW-Authenticate": 'Basic realm="FreeNETvpn"'})
+    request.state.auth_mode = "basic"
     return config
+
+
+def same_origin(request):
+    if request.headers.get("origin") != "https://" + app.state.config["domain"]:
+        raise HTTPException(403, "Недопустимый источник запроса")
+
+
+def mutation(request: Request, config=Depends(authenticated)):
+    same_origin(request)
+    if request.state.auth_mode == "session":
+        if not hmac.compare_digest(request.headers.get("x-csrf-token", ""), request.state.session["csrf"]):
+            raise HTTPException(403, "Обновите страницу: проверка сессии не пройдена")
+    elif request.headers.get("x-freenet-request") != "1":
+        raise HTTPException(403, "Требуется защита от CSRF")
+    return config
+
+
+class Login(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=1024)
+
+
+@app.post("/admin/api/login")
+def login(body: Login, request: Request, response: Response):
+    same_origin(request)
+    now = time.time()
+    key = request.client.host if request.client else "local"
+    attempts = [t for t in app.state.login_attempts.get(key, []) if now-t < 60]
+    app.state.login_attempts[key] = attempts
+    if len(attempts) >= 12:
+        raise HTTPException(429, "Слишком много попыток. Повторите через минуту")
+    attempts.append(now)
+    config = app.state.config
+    correct = hmac.compare_digest(body.username.encode(), config["username"].encode())
+    if not verify_password(body.password, config["password_hash"]) or not correct:
+        raise HTTPException(401, "Неверный логин или пароль")
+    app.state.sessions = {k:v for k,v in app.state.sessions.items() if v["expires"] > now}
+    if len(app.state.sessions) >= 100:
+        raise HTTPException(429, "Слишком много активных сессий")
+    token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
+    app.state.sessions[token] = {"csrf": csrf, "expires": now + 8*3600}
+    response.set_cookie("freenet_session", token, max_age=8*3600, secure=True, httponly=True, samesite="strict", path="/admin")
+    return {"username": config["username"], "csrf": csrf}
+
+
+@app.get("/admin/api/session")
+def session(request: Request, config=Depends(authenticated)):
+    return {"username": config["username"], "csrf": getattr(request.state, "session", {}).get("csrf"), "domain": config["domain"]}
+
+
+@app.post("/admin/api/logout")
+def logout(request: Request, response: Response, config=Depends(mutation)):
+    app.state.sessions.pop(request.cookies.get("freenet_session", ""), None)
+    response.delete_cookie("freenet_session", path="/admin", secure=True, httponly=True, samesite="strict")
+    return {"ok": True}
+
+
+def control(method, data=None):
+    payload = json.dumps({"token": app.state.config["control_token"], "method": method, "data": data}).encode() + b"\n"
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+            connection.settimeout(35)
+            connection.connect(CONTROL_SOCKET)
+            connection.sendall(payload)
+            with connection.makefile("rb") as stream:
+                raw = stream.readline(2*1024*1024 + 1)
+        if len(raw) > 2*1024*1024:
+            raise ValueError("Response too large")
+        result = json.loads(raw)
+    except (OSError, ValueError):
+        raise HTTPException(503, "Сервис управления недоступен. Проверьте freenetvpn-control на сервере.")
+    if not result["ok"]:
+        raise HTTPException(400, result["error"])
+    return result["data"]
+
+
+@app.get("/admin/api/overview")
+def overview(config=Depends(authenticated)):
+    return control("snapshot")
+
+
+@app.post("/admin/api/jobs", status_code=202)
+def submit(body: dict, config=Depends(mutation)):
+    return control("submit", body)
+
+
+@app.get("/admin/api/export")
+def export(protocol: str, name: str, format: str = "default", config=Depends(authenticated)):
+    return control("export", {"protocol": protocol, "name": name, "format": format})
+
+
+@app.get("/admin/api/qr")
+def qr(protocol: str, name: str, config=Depends(authenticated)):
+    if protocol not in {"vless", "amnezia", "wireguard", "outline"}:
+        raise HTTPException(400, "Для этого протокола используйте файл конфигурации")
+    import qrcode
+    import qrcode.image.svg
+    exported = control("export", {"protocol": protocol, "name": name})
+    image = qrcode.make(base64.b64decode(exported["content"]).decode().strip(), image_factory=qrcode.image.svg.SvgPathImage, border=4)
+    data = io.BytesIO()
+    image.save(data)
+    return Response(data.getvalue(), media_type="image/svg+xml")
 
 
 @app.get("/healthz")
@@ -64,24 +199,14 @@ def auth_check(config=Depends(authenticated)):
 
 @app.get("/admin", response_class=HTMLResponse)
 @app.get("/admin/", response_class=HTMLResponse)
-def index(config=Depends(authenticated)):
-    wg = html.escape(config["wg_domain"], quote=True)
-    wg_link = f'<li><a href="https://{wg}/">WireGuard — клиенты и QR-коды</a></li>' if "wireguard" in config["services"] else ""
-    vless_help = '<p>Профиль VLESS: <code>sudo bash menu.sh</code> на сервере.</p>' if "vless" in config["services"] else ""
-    enabled = html.escape(", ".join(config["services"]))
-    return f"""<!doctype html><html lang="ru"><meta charset="utf-8">
-    <meta name="viewport" content="width=device-width"><title>FreeNETvpn</title>
-    <style>body{{font:18px system-ui;max-width:760px;margin:6vh auto;padding:24px;background:#101827;color:#edf3ff}}
-    a{{color:#88d9ff}}li{{margin:18px 0}}code{{background:#22314a;padding:4px}}</style>
-    <h1>FreeNETvpn</h1><p>Управление вашим VPN-сервером</p><ul>
-    {wg_link}
-    <li><a href="/admin/status">Доступность сервисов</a></li>
-    <li><a href="/admin/backups">Готовые резервные копии</a></li></ul>
-    {vless_help}
-    <p>Включённые протоколы: {enabled}.</p>
-    <p>Клиенты IKEv2, L2TP, Outline и AmneziaWG: <code>sudo bash menu.sh</code>, пункт 7.</p>
-    <p>Создание полной резервной копии: <code>sudo bash scripts/backup.sh</code>.</p>
-    <p>Статус TCP-портов не подтверждает прохождение VPN-трафика.</p></html>"""
+def index(request: Request, credentials: HTTPBasicCredentials | None = Depends(security)):
+    status = 200
+    try:
+        authenticated(request, credentials)
+    except HTTPException:
+        status = 401
+    content = (STATIC / "index.html").read_text(encoding="utf-8")
+    return HTMLResponse(content.replace("{{WG_DOMAIN}}", html.escape(app.state.config["wg_domain"], quote=True)), status_code=status)
 
 
 @app.get("/admin/status")

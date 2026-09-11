@@ -95,6 +95,7 @@ if [[ $firewall -eq 1 ]]; then
   bash scripts/ufw_open_ports.sh
 fi
 # Bind-mounted config files need container recreation after atomic file replacement.
+bash scripts/install_control.sh
 python3 tools/manage.py compose up -d --force-recreate --wait --wait-timeout 120
 bash scripts/health_check.sh
 domain="$(python3 tools/manage.py get DOMAIN)"

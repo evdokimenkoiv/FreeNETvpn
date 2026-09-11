@@ -1,5 +1,6 @@
 """Optional VPN services: persistent credentials, configuration and client lifecycle."""
 import base64
+import copy
 import json
 import os
 import plistlib
@@ -12,6 +13,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 import manage
+import presets
 
 EXTRA = {"ikev2", "l2tp", "outline", "amnezia"}
 
@@ -31,7 +33,10 @@ def state_file(root):
 
 
 def read_state(root):
-    return json.loads(state_file(root).read_text())
+    state = json.loads(state_file(root).read_text()) if state_file(root).exists() else {"version": 1, "clients": {}}
+    for protocol in ("ikev2", "l2tp", "amnezia", "vless"):
+        state["clients"].setdefault(protocol, {})
+    return state
 
 
 def save(state, root):
@@ -71,7 +76,7 @@ def prepare(config, root):
     enabled = set(config["COMPOSE_PROFILES"].split(","))
     if not enabled & EXTRA:
         return
-    state = read_state(root) if state_file(root).exists() else {"version": 1, "clients": {"ikev2": {}, "l2tp": {}, "amnezia": {}}}
+    state = read_state(root)
     if enabled & {"ikev2", "l2tp"}:
         state.setdefault("ipsec_psk", secrets.token_urlsafe(32))
         certificate(root, config["DOMAIN"])
@@ -207,11 +212,16 @@ def export_client(protocol, name, config, state, root):
         peer = state["clients"][protocol][name]
         if protocol == "amnezia":
             awg = state["awg"]
-            content = f'[Interface]\nPrivateKey = {peer["private"]}\nAddress = {peer["address"]}/32\nDNS = {config["DNS1"]}, {config["DNS2"]}\nMTU = 1280\n'
-            content += "".join(f"{k} = {v}\n" for k,v in awg["params"].items())
-            content += f'\n[Peer]\nPublicKey = {awg["public"]}\nAllowedIPs = 0.0.0.0/0\nEndpoint = {config["DOMAIN"]}:{config["AWG_PORT"]}\nPersistentKeepalive = 25\n'
+            profile = presets.get("amnezia", peer.get("preset"))
+            content = f'[Interface]\nPrivateKey = {peer["private"]}\nAddress = {peer["address"]}/32\nDNS = {config["DNS1"]}, {config["DNS2"]}\nMTU = {profile["mtu"]}\n'
+            content += "".join(f"{k} = {v}\n" for k,v in {**awg["params"], **profile["junk"]}.items())
+            content += f'\n[Peer]\nPublicKey = {awg["public"]}\nAllowedIPs = 0.0.0.0/0\nEndpoint = {config["DOMAIN"]}:{config["AWG_PORT"]}\nPersistentKeepalive = {profile["keepalive"]}\n'
             path = folder / f"{name}.conf"
             manage.atomic_write(path, content)
+        elif protocol == "vless":
+            path = folder / f"{name}.txt"
+            manage.atomic_write(path, presets.vless_uri(config, peer, name) + "\n")
+            manage.atomic_write(folder / f"{name}.json", json.dumps(presets.vless_json(config, peer), indent=2))
         else:
             values = dict(server=config["DOMAIN"], username=name, password=peer["password"], protocol=protocol)
             if protocol == "l2tp":
@@ -235,13 +245,23 @@ def export_client(protocol, name, config, state, root):
     return path
 
 
-def client(action, protocol, name, root):
+def client(action, protocol, name, root, preset=None):
+    from operation_lock import locked
+    with locked(root):
+        return _client(action, protocol, name, root, preset)
+
+
+def _client(action, protocol, name, root, preset=None):
     config = manage.read_config(root)
     if protocol not in config["COMPOSE_PROFILES"].split(","):
         raise ValueError(f"{protocol} is not enabled")
     if action != "list" and (not name or not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", name)):
         raise ValueError("Client name must have 1-32 letters, digits, underscores or hyphens")
     state = read_state(root)
+    previous = copy.deepcopy(state)
+    profile = presets.get(protocol, preset)
+    if action == "preset" and (protocol not in presets.CATALOG or not preset):
+        raise ValueError("Choose a VLESS or AmneziaWG preset")
     if protocol == "outline":
         peers = outline_api(config, root, "access-keys")["accessKeys"]
         selected = [p for p in peers if p.get("name") == name]
@@ -274,18 +294,34 @@ def client(action, protocol, name, root):
                 if not address:
                     raise ValueError("Client address pool exhausted")
                 peers[name] = {**keypair(), "address": address}
+            elif protocol == "vless":
+                peers[name] = {"uuid": str(uuid.uuid4())}
             else:
                 peers[name] = {"password": secrets.token_urlsafe(24)}
+            if profile:
+                peers[name]["preset"] = profile["id"]
         elif name not in peers:
             raise ValueError("Client does not exist")
         elif action == "revoke":
             del peers[name]
-        if action in {"add", "revoke"}:
+        elif action == "preset":
+            peers[name]["preset"] = profile["id"]
+        if action in {"add", "revoke", "preset"}:
             save(state, root)
-            render(config, root)
+            manage.render(config, root)
             # Recreate closes existing sessions after revocation and refreshes bind mounts.
-            service = "amnezia" if protocol == "amnezia" else "ipsec"
-            manage.compose(["up", "-d", "--force-recreate", "--wait", service], root)
+            service = {"amnezia": "amnezia", "vless": "xray"}.get(protocol, "ipsec")
+            if protocol == "vless":
+                try:
+                    manage.compose(["run", "--rm", "--no-deps", "xray", "run", "-test", "-config", "/etc/xray/config.json"], root)
+                    manage.compose(["up", "-d", "--force-recreate", "--wait", service], root)
+                except Exception:
+                    save(previous, root)
+                    manage.render(config, root)
+                    manage.compose(["up", "-d", "--force-recreate", "--wait", service], root)
+                    raise
+            elif not (action == "preset" and protocol == "amnezia"):
+                manage.compose(["up", "-d", "--force-recreate", "--wait", service], root)
     if action == "revoke":
         for path in (root / "data/exports" / protocol).glob(f"{name}.*"):
             path.unlink()

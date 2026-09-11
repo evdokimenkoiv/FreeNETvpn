@@ -15,6 +15,7 @@ import sys
 import tarfile
 import tempfile
 import uuid
+import presets
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlencode
@@ -143,18 +144,21 @@ def render(config, root=ROOT):
     if hasattr(os, "geteuid") and os.geteuid() == 0:
         os.chown(backups, 0, 10001)
     services = config["COMPOSE_PROFILES"].split(",")
+    control_token = root / "data/control.token"
+    if not control_token.exists():
+        atomic_write(control_token, secrets.token_hex(32))
     admin = dict(username=config["ADMIN_USER"], password_hash=config["ADMIN_PASSWORD_HASH"],
-                 wg_domain=config["WG_DOMAIN"], services=services)
+                 domain=config["DOMAIN"], wg_domain=config["WG_DOMAIN"], services=services,
+                 control_token=control_token.read_text().strip())
     atomic_write(runtime / "admin.json", json.dumps(admin, indent=2) + "\n", 0o644)
-    xray = {"log": {"loglevel": "warning"}, "inbounds": [{"listen": "0.0.0.0", "port": 10000,
-            "protocol": "vless", "settings": {"clients": [{"id": config["VLESS_UUID"]}], "decryption": "none"},
-            "streamSettings": {"network": "ws", "wsSettings": {"path": config["VLESS_WS_PATH"]}}}],
+    xray = {"log": {"loglevel": "warning"}, "inbounds": presets.server_inbounds(config, root),
             "outbounds": [{"protocol": "freedom", "tag": "direct"}]}
     atomic_write(runtime / "xray.json", json.dumps(xray, indent=2) + "\n", 0o644)
     caddy = f"{{\n  email {config['LE_EMAIL']}\n}}\n\n{config['DOMAIN']} {{\n"
     caddy += '  @admin path /admin /admin/*\n  handle @admin {\n    reverse_proxy admin:8000\n  }\n'
     if "vless" in services:
         caddy += f"  @vless path {config['VLESS_WS_PATH']}\n  handle @vless {{\n    reverse_proxy xray:10000\n  }}\n"
+        caddy += f"  @grpc path /{presets.grpc_name(config)}/*\n  handle @grpc {{\n    reverse_proxy h2c://xray:10001\n  }}\n"
     caddy += "  handle /healthz {\n    reverse_proxy admin:8000\n  }\n  handle {\n    root * /srv/site\n    file_server\n  }\n}\n"
     if "wireguard" in services:
         caddy += f"\n{config['WG_DOMAIN']} {{\n  forward_auth admin:8000 {{\n    uri /auth\n  }}\n  reverse_proxy wg-easy:51821\n}}\n"
@@ -173,13 +177,13 @@ def client_uri(config):
     return f"vless://{config['VLESS_UUID']}@{config['DOMAIN']}:443?{query}#FreeNETvpn"
 
 
-def compose(args, root=ROOT, capture=False, check=True):
+def compose(args, root=ROOT, capture=False, check=True, input_text=None):
     config = read_config(root)
     env = os.environ.copy()
     env.update(config)
     return subprocess.run(["docker", "compose", "--project-directory", str(root), "-p", "freenetvpn",
                            "--env-file", str(root / ".env"), "-f", str(root / "docker-compose.yml"), *args],
-                          cwd=root, env=env, text=True, capture_output=capture, check=check)
+                          cwd=root, env=env, text=True, capture_output=capture, check=check, input=input_text)
 
 
 def make_backup(root=ROOT):
@@ -307,9 +311,10 @@ def main():
     service_parser = subs.add_parser("services")
     service_parser.add_argument("selection", help="Comma-separated protocols, or all")
     client = subs.add_parser("client")
-    client.add_argument("action", choices=["add", "list", "export", "revoke"])
-    client.add_argument("protocol", choices=["ikev2", "l2tp", "outline", "amnezia"])
+    client.add_argument("action", choices=["add", "list", "export", "revoke", "preset"])
+    client.add_argument("protocol", choices=["ikev2", "l2tp", "outline", "amnezia", "vless"])
     client.add_argument("name", nargs="?")
+    client.add_argument("--preset")
     args = parser.parse_args()
     try:
         if args.command == "configure":
@@ -328,7 +333,7 @@ def main():
                 render(updated)
                 print("Selection saved; run sudo bash install.sh --existing")
             else:
-                protocols.client(args.action, args.protocol, args.name, ROOT)
+                protocols.client(args.action, args.protocol, args.name, ROOT, preset=args.preset)
         elif args.command == "restore":
             restore(args.archive.resolve())
         elif args.command == "backup":
