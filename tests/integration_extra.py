@@ -52,6 +52,10 @@ def start_ipsec_client(service, config, secret):
     dc("up", "-d", service)
     dc("exec", "-T", service, "sh", "-c", "cp /client/ipsec.conf /etc/ipsec.conf; cp /client/ipsec.secrets /etc/ipsec.secrets; cp /ca/ca.pem /etc/ipsec.d/cacerts/ca.pem; ipsec start")
     eventually(lambda: dc("exec", "-T", service, "ipsec", "up", "probe"))
+    def installed():
+        status = dc("exec", "-T", service, "ipsec", "statusall").stdout
+        assert "INSTALLED" in status, status
+    eventually(installed)
 
 
 def main():

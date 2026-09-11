@@ -40,7 +40,7 @@ def save(state, root):
 
 def certificate(root, domain):
     pki = root / "data/ipsec"
-    for folder in ("private", "certs", "cacerts"):
+    for folder in ("private", "certs", "cacerts", "aacerts", "ocspcerts", "acerts", "crls"):
         (pki / folder).mkdir(parents=True, exist_ok=True)
     ca, key = pki / "cacerts/ca.pem", pki / "private/ca.pem"
     if not ca.exists():
@@ -175,6 +175,19 @@ def outline_api(config, root, path, method="GET", body=None):
     with urlopen(request, context=context, timeout=15) as response:
         data = response.read()
         return json.loads(data) if data else {}
+
+
+def check(config, root):
+    enabled = set(config["COMPOSE_PROFILES"].split(","))
+    if enabled & {"ikev2", "l2tp"}:
+        result = manage.compose(["exec", "-T", "ipsec", "ipsec", "statusall"], root, capture=True)
+        if "uptime:" not in result.stdout:
+            raise ValueError("IPsec daemon is not ready")
+    if "amnezia" in enabled:
+        manage.compose(["exec", "-T", "amnezia", "awg", "show", "awg0", "public-key"], root, capture=True)
+    if "outline" in enabled:
+        outline_api(config, root, "access-keys")
+    print("Enabled protocol daemons/API ready; verify traffic with an external client")
 
 
 def export_client(protocol, name, config, state, root):

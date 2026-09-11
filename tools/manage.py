@@ -303,6 +303,7 @@ def main():
     rest = subs.add_parser("restore")
     rest.add_argument("archive", type=Path)
     subs.add_parser("prepare-protocols")
+    subs.add_parser("check-protocols")
     service_parser = subs.add_parser("services")
     service_parser.add_argument("selection", help="Comma-separated protocols, or all")
     client = subs.add_parser("client")
@@ -313,10 +314,12 @@ def main():
     try:
         if args.command == "configure":
             configure(args)
-        elif args.command in {"prepare-protocols", "client", "services"}:
+        elif args.command in {"prepare-protocols", "check-protocols", "client", "services"}:
             import protocols
             if args.command == "prepare-protocols":
                 protocols.prepare(read_config(), ROOT)
+            elif args.command == "check-protocols":
+                protocols.check(read_config(), ROOT)
             elif args.command == "services":
                 updated = dict(read_config(), COMPOSE_PROFILES=",".join(sorted(SUPPORTED)) if args.selection == "all" else args.selection)
                 validate(updated)

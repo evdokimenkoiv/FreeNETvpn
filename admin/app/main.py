@@ -68,6 +68,7 @@ def index(config=Depends(authenticated)):
     wg = html.escape(config["wg_domain"], quote=True)
     wg_link = f'<li><a href="https://{wg}/">WireGuard — клиенты и QR-коды</a></li>' if "wireguard" in config["services"] else ""
     vless_help = '<p>Профиль VLESS: <code>sudo bash menu.sh</code> на сервере.</p>' if "vless" in config["services"] else ""
+    enabled = html.escape(", ".join(config["services"]))
     return f"""<!doctype html><html lang="ru"><meta charset="utf-8">
     <meta name="viewport" content="width=device-width"><title>FreeNETvpn</title>
     <style>body{{font:18px system-ui;max-width:760px;margin:6vh auto;padding:24px;background:#101827;color:#edf3ff}}
@@ -77,6 +78,8 @@ def index(config=Depends(authenticated)):
     <li><a href="/admin/status">Доступность сервисов</a></li>
     <li><a href="/admin/backups">Готовые резервные копии</a></li></ul>
     {vless_help}
+    <p>Включённые протоколы: {enabled}.</p>
+    <p>Клиенты IKEv2, L2TP, Outline и AmneziaWG: <code>sudo bash menu.sh</code>, пункт 7.</p>
     <p>Создание полной резервной копии: <code>sudo bash scripts/backup.sh</code>.</p>
     <p>Статус TCP-портов не подтверждает прохождение VPN-трафика.</p></html>"""
 
@@ -92,7 +95,10 @@ def status(config=Depends(authenticated)):
                 targets[service] = "tcp reachable"
         except OSError:
             targets[service] = "unreachable"
-    return {"checks": targets, "scope": "TCP reachability only; test a VPN client separately"}
+    for service in ("ikev2", "l2tp", "amnezia", "outline"):
+        if service in config["services"]:
+            targets[service] = "enabled; check on server with scripts/health_check.sh"
+    return {"checks": targets, "scope": "Configuration and selected TCP reachability only; test a VPN client separately"}
 
 
 @app.get("/admin/backups")

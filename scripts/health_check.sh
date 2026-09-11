@@ -29,6 +29,7 @@ if [[ ",$profiles," == *,wireguard,* ]]; then
   [[ "$status" == 401 ]] || { echo "ERROR: WireGuard UI protection returned $status"; exit 1; }
 fi
 if [[ $quiet -eq 0 ]]; then
+  manage check-protocols
   manage compose ps
   echo "Services, TLS and authentication checks passed. VPN client handshake still requires an external test."
 fi

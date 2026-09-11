@@ -61,6 +61,9 @@ if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; t
 fi
 systemctl enable --now docker
 profiles="$(python3 tools/manage.py get COMPOSE_PROFILES)"
+if [[ ",$profiles," == *,outline,* && "$(uname -m)" != x86_64 ]]; then
+  echo "The pinned Outline image currently requires x86_64."; exit 1
+fi
 if [[ ",$profiles," == *,wireguard,* ]]; then
   modprobe wireguard
 fi
@@ -93,3 +96,4 @@ if [[ ",$profiles," == *,wireguard,* ]]; then
   echo "Set the WireGuard port to $(python3 tools/manage.py get WG_PORT) and DNS to the values in .env."
 fi
 echo "Verify a VPN client handshake and traffic before treating the server as operational."
+echo "Other protocol clients: sudo bash menu.sh, option 7; see docs/protocols.md."
