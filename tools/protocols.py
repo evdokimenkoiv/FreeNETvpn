@@ -252,7 +252,11 @@ def client(action, protocol, name, root):
                 raise ValueError("Client already exists")
             added = outline_api(config, root, "access-keys", "POST", {"name": name, "port": int(config["OUTLINE_PORT"])})
             # Explicit rename also supports server releases that ignore POST's name.
-            outline_api(config, root, f'access-keys/{added["id"]}/name', "PUT", {"name": name})
+            try:
+                outline_api(config, root, f'access-keys/{added["id"]}/name', "PUT", {"name": name})
+            except Exception:
+                outline_api(config, root, f'access-keys/{added["id"]}', "DELETE")
+                raise
         elif action == "revoke":
             if len(selected) != 1:
                 raise ValueError("Client missing or ambiguous")

@@ -45,7 +45,7 @@ sudo python3 tools/manage.py client revoke amnezia travel
 - **Outline:** `data/exports/outline/NAME.txt` contains the `ss://` key for Outline. Management is through the CLI, not an exposed Outline Manager API. Keep the configured data port stable once keys exist; changing it requires replacing existing keys and updating firewall mappings.
 - **AmneziaWG:** `data/exports/amnezia/NAME.conf` includes matching packet obfuscation parameters. Import into an AmneziaWG configuration-compatible client. This is the AmneziaWG protocol, not the Amnezia desktop application's complete SSH/Docker management system. Builds use official AmneziaWG Go v3.1.20260828 and tools v3.1.20260812 commits; no custom host kernel module is installed.
 
-The original shell helper names for IKEv2/L2TP now call the managed v2 CLI. Originals remain in `legacy/` only as historical reference.
+The original shell helper names for IKEv2/L2TP now call the managed v2 CLI. Originals remain in `legacy/` only as historical reference. The installer writes module-loading and PPP-device configuration for subsequent host boots; actual host reboot acceptance still needs a VPS test.
 
 ## Verification and recovery
 

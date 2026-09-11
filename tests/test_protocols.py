@@ -112,6 +112,36 @@ def test_no_plaintext_l2tp_or_public_outline_api():
     assert compose["services"]["outline"]["ports"][0].startswith("127.0.0.1:")
 
 
+def test_outline_failed_rename_removes_partial_key(extra, monkeypatch):
+    root, _ = extra
+    calls = []
+    def fake_api(config, root, path, method="GET", body=None):
+        calls.append((path, method))
+        if method == "GET":
+            return {"accessKeys": []}
+        if method == "POST":
+            return {"id": "3"}
+        if method == "PUT":
+            raise OSError("Name update failed")
+        return {}
+    monkeypatch.setattr(protocols, "outline_api", fake_api)
+    with pytest.raises(OSError):
+        protocols.client("add", "outline", "phone", root)
+    assert calls[-1] == ("access-keys/3", "DELETE")
+
+
+def test_prepare_refuses_breaking_existing_outline_port(extra, monkeypatch):
+    root, config = extra
+    state = protocols.read_state(root)
+    state["outline_port"] = "2443"
+    protocols.save(state, root)
+    original = protocols.state_file(root).read_bytes()
+    monkeypatch.setattr(protocols, "certificate", lambda root, domain: None)
+    with pytest.raises(ValueError, match="port change"):
+        protocols.prepare(dict(config, OUTLINE_PORT="2444"), root)
+    assert protocols.state_file(root).read_bytes() == original
+
+
 @pytest.mark.skipif(shutil.which("openssl") is None, reason="OpenSSL required; exercised by both Linux CI runners")
 def test_real_pki_and_keys_are_preserved_on_prepare(extra):
     root, config = extra

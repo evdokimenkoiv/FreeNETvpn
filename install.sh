@@ -61,19 +61,28 @@ if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; t
 fi
 systemctl enable --now docker
 profiles="$(python3 tools/manage.py get COMPOSE_PROFILES)"
+vpn_modules=()
 if [[ ",$profiles," == *,outline,* && "$(uname -m)" != x86_64 ]]; then
   echo "The pinned Outline image currently requires x86_64."; exit 1
 fi
 if [[ ",$profiles," == *,wireguard,* ]]; then
   modprobe wireguard
+  vpn_modules+=(wireguard)
 fi
 if [[ ",$profiles," == *,ikev2,* || ",$profiles," == *,l2tp,* ]]; then
   modprobe af_key
   modprobe ppp_generic
   modprobe ppp_async
+  vpn_modules+=(af_key ppp_generic ppp_async)
   [[ -c /dev/ppp ]] || mknod /dev/ppp c 108 0
+  printf 'c /dev/ppp 0600 root root - 108:0\n' >/etc/tmpfiles.d/freenetvpn.conf
 fi
-if [[ ",$profiles," == *,amnezia,* ]]; then modprobe tun; fi
+if [[ ",$profiles," == *,amnezia,* ]]; then
+  modprobe tun
+  vpn_modules+=(tun)
+fi
+# Docker's device mappings must still exist after a host reboot.
+printf '%s\n' "${vpn_modules[@]}" >/etc/modules-load.d/freenetvpn.conf
 python3 tools/manage.py prepare-protocols
 python3 tools/manage.py compose config --quiet
 python3 tools/manage.py compose pull --ignore-buildable
