@@ -1,8 +1,8 @@
 # FreeNETvpn v2
 
-WireGuard (wg-easy 15.4.0), VLESS over WebSocket + TLS (Xray 26.3.27), and an authenticated control panel behind Caddy 2.11.4. Ubuntu 22.04/24.04 LTS, Docker Compose v2, public IPv4.
+WireGuard (wg-easy 15.4.0), VLESS/WebSocket/TLS (Xray 26.3.27), IKEv2, L2TP/IPsec, Outline and AmneziaWG, with an authenticated control panel behind Caddy 2.11.4. Ubuntu 22.04/24.04 LTS x86_64, Docker Compose v2, public IPv4.
 
-**Scope:** v2 restores WireGuard and VLESS. IKEv2/L2TP, Outline and Amnezia from the original repository are retained as legacy reference and are not claimed to work. Existing installations are not overwritten; read [migration](docs/migration.md).
+All six protocol integrations are included. Existing installations are not overwritten; read [migration](docs/migration.md) and [protocol setup/client operations](docs/protocols.md). Amnezia integration means AmneziaWG with configuration export.
 
 ## Install
 
@@ -10,7 +10,7 @@ Create two DNS A records pointing directly at the server:
 - `vpn.example.com` — panel and VLESS, also the WireGuard client endpoint.
 - `wg.example.com` — protected wg-easy UI.
 
-Allow TCP 80/443 and your chosen WireGuard UDP port (default 51820) in the hosting-provider firewall. Use working DNS and remove unusable AAAA records.
+Allow TCP 80/443 and the selected [VPN ports](docs/protocols.md) in the hosting-provider firewall. Use working DNS and remove unusable AAAA records.
 
 ```bash
 sudo apt-get update
@@ -52,7 +52,7 @@ For automation:
 sudo python3 tools/manage.py configure --domain vpn.example.com --wg-domain wg.example.com --email admin@example.com --wg-port 51820
 sudo bash install.sh --existing
 ```
-`--services vless` or `--services wireguard` selects one protocol. Both are enabled by default. `--password-stdin` supports a protected input stream; avoid putting passwords in command-line arguments or history.
+`--services vless` or another comma-separated subset selects protocols on a new installation. All six are enabled by default. Existing installations retain their selection; use `sudo python3 tools/manage.py services all` and rerun the installer to enable the full bundle. `--password-stdin` supports a protected input stream; avoid putting passwords in command-line arguments or history.
 
 For an existing v2 installation, create a backup, update the checkout to a reviewed commit, and run:
 ```bash
@@ -90,10 +90,12 @@ python -m pytest -q
 shellcheck -S warning -e SC1091 install.sh menu.sh restore.sh scripts/*.sh
 ```
 
-GitHub Actions also runs actual Caddy/TLS, Xray client/server and kernel WireGuard packet tests on Ubuntu 22.04 and 24.04. `tests/integration.py` is for an **empty disposable Linux checkout only**; it creates a test project and removes its Docker volumes afterwards. It uses a private test CA with explicit certificate validation.
+GitHub Actions runs actual TLS, WireGuard, Xray, IPsec/PPP, Outline and AmneziaWG client/server packet tests on Ubuntu 22.04 and 24.04. `tests/integration.py` and `tests/integration_extra.py` are for an **empty disposable Linux checkout only**; they create test projects and remove their Docker volumes afterwards. TLS clients explicitly trust test certificates. The Outline probe uses a disposable bridge with a non-private address range so Outline's RFC1918 destination filtering remains enabled.
 
 Public CA issuance, external UDP, provider routing, DNS leaks, reboot/recovery and a full root installation on a VPS require [external acceptance](docs/acceptance.md). No blanket guarantee of availability through regional network filtering is made.
 
 Spec Kit artifacts: [.specify/memory/constitution.md](.specify/memory/constitution.md), [specification](specs/001-reliable-core/spec.md), [plan](specs/001-reliable-core/plan.md), [tasks/evidence](specs/001-reliable-core/tasks.md).
+
+All-protocol extension: [specification](specs/002-all-protocols/spec.md), [plan](specs/002-all-protocols/plan.md), [tasks/evidence](specs/002-all-protocols/tasks.md).
 
 MIT for FreeNETvpn code; upstream components retain their respective licenses.

@@ -169,7 +169,10 @@ conn probe
         write("l2tp-client/xl2tpd.conf", f"[global]\nport = 1701\nforce userspace = yes\n[lac vpn]\nlns = {ipsec_ip}\npppoptfile = /client/options\nlength bit = yes\n")
         write("l2tp-client/options", 'name testclient\npassword L2TP-ci-password-987654321\nnoauth\nrefuse-eap\nnoccp\nnoipdefault\nipcp-accept-local\nipcp-accept-remote\nmtu 1280\nmru 1280\n')
         dc("exec", "-T", "l2tp-client", "sh", "-c", "mkdir -p /run/xl2tpd; xl2tpd -c /client/xl2tpd.conf; sleep 1; echo 'c vpn' > /run/xl2tpd/l2tp-control")
-        eventually(lambda: dc("exec", "-T", "l2tp-client", "ip", "address", "show", "ppp0"))
+        def ppp_ready():
+            interfaces = json.loads(dc("exec", "-T", "l2tp-client", "ip", "-j", "-4", "address", "show", "ppp0").stdout)
+            assert interfaces and "UP" in interfaces[0]["flags"] and interfaces[0]["addr_info"]
+        eventually(ppp_ready)
         dc("exec", "-T", "l2tp-client", "ip", "route", "add", echo_ip + "/32", "dev", "ppp0")
         payload = dc("exec", "-T", "l2tp-client", "curl", "-fsS", "--max-time", "20", "--interface", "ppp0", url)
         assert payload.stdout == "freenet-extra-tunnel-ok"
@@ -183,9 +186,18 @@ conn probe
         dc("up", "-d", "outline-client")
         payload = eventually(lambda: run(["curl", "-fsS", "--max-time", "10", "--socks5-hostname", "127.0.0.1:11081", url]))
         assert payload.stdout == "freenet-extra-tunnel-ok"
+        dc("restart", "outline")
+        eventually(lambda: protocols.outline_api(config, ROOT, "access-keys"))
+        assert protocols.outline_api(config, ROOT, "access-keys")["accessKeys"][0]["password"] == peer["password"]
+        payload = eventually(lambda: run(["curl", "-fsS", "--max-time", "10", "--socks5-hostname", "127.0.0.1:11081", url]))
+        assert payload.stdout == "freenet-extra-tunnel-ok"
         protocols.client("revoke", "outline", "testclient", ROOT)
         assert not protocols.outline_api(config, ROOT, "access-keys")["accessKeys"]
-        print("PASS: Outline API TLS, create/export key, real Shadowsocks payload and key revocation", flush=True)
+        # Restarting the test client forces a new transport rather than reusing one.
+        dc("restart", "outline-client")
+        rejected = run(["curl", "-fsS", "--max-time", "5", "--socks5-hostname", "127.0.0.1:11081", url], check=False)
+        assert rejected.returncode != 0
+        print("PASS: Outline API TLS, key export, payload after restart and revoked-key rejection", flush=True)
         # AWG: both ends use upstream AmneziaWG and non-default packet parameters.
         exported = protocols.export_client("amnezia", "testclient", config, state, ROOT).read_text()
         lines = [line for line in exported.splitlines() if not line.startswith(("Address =", "DNS =", "MTU ="))]
@@ -196,7 +208,16 @@ conn probe
         payload = dc("exec", "-T", "awg-client", "curl", "-fsS", "--max-time", "20", "--interface", "awg0", url)
         assert payload.stdout == "freenet-extra-tunnel-ok"
         assert any(int(x.split()[1]) for x in dc("exec", "-T", "awg-client", "awg", "show", "awg0", "latest-handshakes").stdout.splitlines())
-        print("PASS: AmneziaWG obfuscated handshake and HTTP through awg0", flush=True)
+        dc("restart", "amnezia")
+        payload = eventually(lambda: dc("exec", "-T", "awg-client", "curl", "-fsS", "--max-time", "5", "--interface", "awg0", url))
+        assert payload.stdout == "freenet-extra-tunnel-ok"
+        # Route management operations to this disposable Compose project only.
+        manage.compose = lambda args, root, **kwargs: dc(*args)
+        protocols.client("revoke", "amnezia", "testclient", ROOT)
+        assert not dc("exec", "-T", "amnezia", "awg", "show", "awg0", "peers").stdout.strip()
+        rejected = dc("exec", "-T", "awg-client", "curl", "-fsS", "--max-time", "5", "--interface", "awg0", url, check=False)
+        assert rejected.returncode != 0
+        print("PASS: AmneziaWG handshake, payload after restart and revoked-peer rejection", flush=True)
     finally:
         print(dc("logs", "--tail", "80", check=False).stdout, flush=True)
         dc("--profile", "*", "down", "--volumes", "--remove-orphans", check=False)

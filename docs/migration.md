@@ -1,6 +1,6 @@
 # Version 2 and legacy installations
 
-Version 2 supports WireGuard and VLESS. The original IKEv2/L2TP, Outline and Amnezia integration was incomplete; those protocols are not silently launched. Original helpers are retained under legacy/ for reference; old entry points fail with an explanation. They are not covered by production support or the current integration tests.
+Version 2 supports WireGuard, VLESS, IKEv2, L2TP/IPsec, Outline and AmneziaWG. Original incomplete helpers are retained under legacy/ for reference; active IKEv2/L2TP entry points use the managed CLI. Existing v2 installations keep their enabled protocols. After updating code, use `sudo python3 tools/manage.py services all` (creates a backup), then `sudo bash install.sh --existing` to enable all services. See [protocol operations](protocols.md).
 
 Do not overwrite a working legacy server. The new configure command rejects .env files without CONFIG_VERSION=2. Existing Docker named volumes are not deleted or automatically converted.
 

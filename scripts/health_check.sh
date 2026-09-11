@@ -28,8 +28,8 @@ if [[ ",$profiles," == *,wireguard,* ]]; then
   status="$(curl -sS --connect-timeout 5 --max-time 10 -o /dev/null -w '%{http_code}' "https://${wg_domain}/")"
   [[ "$status" == 401 ]] || { echo "ERROR: WireGuard UI protection returned $status"; exit 1; }
 fi
+manage check-protocols
 if [[ $quiet -eq 0 ]]; then
-  manage check-protocols
   manage compose ps
   echo "Services, TLS and authentication checks passed. VPN client handshake still requires an external test."
 fi

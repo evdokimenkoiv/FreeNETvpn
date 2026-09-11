@@ -80,6 +80,9 @@ def prepare(config, root):
             "S3": 16, "S4": 16, "H1": 10123456, "H2": 20123456, "H3": 30123456, "H4": 40123456}}
     if "outline" in enabled:
         state.setdefault("outline_prefix", secrets.token_urlsafe(32))
+        if state.get("outline_port", config["OUTLINE_PORT"]) != config["OUTLINE_PORT"]:
+            raise ValueError("Outline port change requires a deliberate key migration; existing keys were preserved")
+        state["outline_port"] = config["OUTLINE_PORT"]
         path = root / "data/outline"
         path.mkdir(parents=True, exist_ok=True)
         if not (path / "api.crt").exists():
@@ -89,7 +92,7 @@ def prepare(config, root):
             os.chmod(path / "api.key", 0o600)
         server_config = path / "shadowbox_server_config.json"
         current = json.loads(server_config.read_text()) if server_config.exists() else {}
-        current.update(hostname=config["DOMAIN"], portForNewAccessKeys=int(config["OUTLINE_PORT"]))
+        current.update(hostname=config["DOMAIN"], portForNewAccessKeys=int(config["OUTLINE_PORT"]), metricsEnabled=False)
         manage.atomic_write(server_config, json.dumps(current))
     save(state, root)
     render(config, root)
@@ -224,7 +227,7 @@ def export_client(protocol, name, config, state, root):
                 ca_payload["PayloadUUID"] = ca_uuid
                 vpn = payload("com.apple.vpn.managed", {"UserDefinedName": f"FreeNETvpn {name}", "VPNType": "IKEv2", "IKEv2": {
                     "RemoteAddress": config["DOMAIN"], "RemoteIdentifier": config["DOMAIN"], "AuthenticationMethod": "None",
-                    "ExtendedAuthEnabled": 1, "AuthName": name, "AuthPassword": peer["password"], "PayloadCertificateUUID": ca_uuid}})
+                    "ExtendedAuthEnabled": 1, "AuthName": name, "AuthPassword": peer["password"]}})
                 profile = payload("Configuration", {"PayloadContent": [ca_payload, vpn]})
                 manage.atomic_write(folder / f"{name}.mobileconfig", plistlib.dumps(profile).decode())
             path = folder / f"{name}.json"

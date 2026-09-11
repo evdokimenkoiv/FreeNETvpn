@@ -1,12 +1,12 @@
 # FreeNETvpn v2
 
-Рабочее ядро для **WireGuard и VLESS/WebSocket/TLS** на Ubuntu 22.04/24.04. Панель защищена авторизацией, SSH-настройки установщик не меняет, повторный запуск сохраняет ключи.
+**WireGuard, VLESS/WebSocket/TLS, IKEv2, L2TP/IPsec, Outline и AmneziaWG** на Ubuntu 22.04/24.04 x86_64. Панель защищена авторизацией, SSH-настройки установщик не меняет, повторный запуск сохраняет ключи.
 
-**IKEv2/L2TP, Outline и Amnezia в этой версии не восстановлены.** Их исходные материалы сохранены в legacy/. Старые установки и Docker-тома автоматически не переносятся: [порядок миграции](docs/migration.md).
+Новые установки включают все шесть протоколов. Существующие сохраняют выбранные сервисы. Старые установки и Docker-тома автоматически не переносятся: [порядок миграции](docs/migration.md).
 
 ## Запуск
 
-Подготовьте два DNS-имени на публичный IPv4 сервера: например vpn.example.com и wg.example.com. Разрешите TCP 80/443 и UDP-порт WireGuard в firewall провайдера.
+Подготовьте два DNS-имени на публичный IPv4 сервера: например vpn.example.com и wg.example.com. Разрешите TCP 80/443, UDP 500/4500, UDP-порты WireGuard/AmneziaWG (51820/51830), TCP/UDP Outline (2443) в firewall провайдера. Порты соответствуют настройкам по умолчанию; UDP 1701 и Outline API открывать не нужно.
 
 ```bash
 sudo apt-get update
@@ -27,6 +27,15 @@ sudo python3 tools/manage.py vless-uri
 Полученный профиль содержит секрет; передавайте его только своему клиенту.
 
 ## Обслуживание
+
+Для включения всех протоколов в уже установленной v2 после обновления кода:
+
+```bash
+sudo python3 tools/manage.py services all
+sudo bash install.sh --existing
+```
+
+Клиенты IKEv2, L2TP, Outline и AmneziaWG создаются через пункт 7 меню или `sudo python3 tools/manage.py client add ПРОТОКОЛ ИМЯ`. Доступны `list`, `export`, `revoke`. Команда выводит путь к профилю в data/exports/. Для IKEv2 нужно доверие к экспортированному CA; для AmneziaWG — клиент, поддерживающий его конфигурации. [Порты и инструкции для каждого протокола](docs/protocols.md).
 
 ```bash
 sudo bash menu.sh
