@@ -1,6 +1,6 @@
 # Reliable FreeNETvpn core
 
-Status: implementation under verification | Created: 2026-09-11
+Status: code and Linux integration verified; external VPS acceptance pending | Created: 2026-09-11
 
 ## Scope
 
