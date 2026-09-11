@@ -104,3 +104,5 @@ Dashboard and presets: [specification](specs/003-dashboard-presets/spec.md), [pl
 All-protocol extension: [specification](specs/002-all-protocols/spec.md), [plan](specs/002-all-protocols/plan.md), [tasks/evidence](specs/002-all-protocols/tasks.md).
 
 MIT for FreeNETvpn code; upstream components retain their respective licenses.
+
+Official Spec Kit 1.0.6 workflow: [setup and agent commands](docs/spec-kit.md), [agent review evidence](docs/spec-kit-review.md), [integration specification](specs/004-spec-kit-integration/spec.md). Run `python tools/spec_audit.py` for the offline structural audit; it does not replace semantic agent review or packet tests. CI checks official context helpers on Ubuntu and Windows.

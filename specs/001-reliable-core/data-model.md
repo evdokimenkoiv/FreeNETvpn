@@ -1,0 +1,3 @@
+# Data model and invariants
+
+DeploymentConfig: CONFIG_VERSION=2, validated domain/port/profile values and authentication hash in .env. Ordinary configuration preserves existing bytes and secrets. RuntimeConfig: generated Caddy/Xray/admin files under runtime/, private parent directory. PersistentState: wg-easy database and protocol data under data/. Backup: offline archive of .env/runtime/data; restore targets must be empty and archive traversal, links and unexpected paths are rejected. Installation owns configuration, protocol services own client records; feature 003 owns jobs/sessions. See tools/manage.py and tests/test_regressions.py.

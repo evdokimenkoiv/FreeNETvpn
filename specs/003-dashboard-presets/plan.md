@@ -9,3 +9,18 @@ Keep preset definitions in `tools/presets.py`. Store a preset ID beside each cli
 Verification: Python authentication/CSRF/allowlist/secret-redaction and preset lifecycle tests; Chromium desktop/mobile tests using an explicitly simulated API; real systemd agent and native WireGuard operations through HTTPS; real VLESS WS/mobile/gRPC and AWG balanced/mobile/economy packet tests on both Linux baselines. Retain prior IKEv2/L2TP/Outline tests.
 
 Constitution check: preserved credentials, no general command endpoint or public Docker socket, configuration validated as data, reproducible dependencies and explicit evidence limitations. The allowlisted local agent extends the earlier read-only panel without weakening these project principles.
+
+## Technical context and project structure
+
+Python 3.12 for development/CI; stdlib management and Spec Kit helper scripts; FastAPI admin with pinned dependencies; Docker Compose and systemd on Ubuntu 22.04/24.04 x86_64 for runtime. Windows supports development checks, not the VPN server runtime. Sources live in tools/, admin/, services/ and scripts/; tests/ contains regression, browser and Linux traffic suites. No runtime dependency on Specify CLI.
+
+## Design artifacts
+
+- research.md records decisions and rejected alternatives.
+- data-model.md defines ownership, secret boundaries and invariants.
+- contracts/ defines this feature's external interface; 003 owns the cabinet/agent contract.
+- quickstart.md gives the repeatable validation path.
+
+## Phases and constitution check
+
+Setup establishes artifact/dependency inputs; foundation validates ownership/security; each prioritized story is implemented and independently verified; final cross-cutting checks preserve historical evidence and external acceptance. tasks.md lists exact source/test paths and dependencies. All six constitution principles apply: reproducible checks; preserve existing secrets/data; authenticated administration without arbitrary commands; validate configuration as data; failing CI; secret-free Git and explicit external limitations. No exception is requested.

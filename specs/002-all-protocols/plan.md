@@ -9,3 +9,18 @@ Keep protocol secrets and client exports under data/, configuration under runtim
 Validation: regressions and shell lint; real IPsec/PPP, Shadowsocks and AmneziaWG clients in disposable Docker networks on Ubuntu 22.04 and 24.04. Report external DNS/firewall/CA/reboot/client-platform acceptance separately.
 
 Upstream references: https://docs.strongswan.org/docs/latest/config/IKEv2.html, https://github.com/OutlineFoundation/outline-server, https://github.com/amnezia-vpn/amneziawg-go, https://github.com/amnezia-vpn/amneziawg-tools.
+
+## Technical context and project structure
+
+Python 3.12 for development/CI; stdlib management and Spec Kit helper scripts; FastAPI admin with pinned dependencies; Docker Compose and systemd on Ubuntu 22.04/24.04 x86_64 for runtime. Windows supports development checks, not the VPN server runtime. Sources live in tools/, admin/, services/ and scripts/; tests/ contains regression, browser and Linux traffic suites. No runtime dependency on Specify CLI.
+
+## Design artifacts
+
+- research.md records decisions and rejected alternatives.
+- data-model.md defines ownership, secret boundaries and invariants.
+- contracts/ defines this feature's external interface; 003 owns the cabinet/agent contract.
+- quickstart.md gives the repeatable validation path.
+
+## Phases and constitution check
+
+Setup establishes artifact/dependency inputs; foundation validates ownership/security; each prioritized story is implemented and independently verified; final cross-cutting checks preserve historical evidence and external acceptance. tasks.md lists exact source/test paths and dependencies. All six constitution principles apply: reproducible checks; preserve existing secrets/data; authenticated administration without arbitrary commands; validate configuration as data; failing CI; secret-free Git and explicit external limitations. No exception is requested.

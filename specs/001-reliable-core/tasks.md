@@ -1,20 +1,45 @@
-# Tasks and evidence
+# Tasks: 001-reliable-core
 
-> Исторический этап разработки. Актуальное расширение: [003 — кабинет и шаблоны](../003-dashboard-presets/spec.md). Ограничение «read-only panel» заменено разрешёнными операциями через локальный агент; требования сохранности данных и запрет общего command API действуют. Все шесть протоколов восстановлены в [этапе 002](../002-all-protocols/spec.md).
+Generated using the official Spec Kit 1.0.6 task workflow and resolved template. Historical numbering/evidence for features 001–003 is retained in implementation-history.md. Completion below is based on verified current code; external acceptance stays open.
 
-- [x] T001 [US1] Establish principles and requirements in .specify/memory/constitution.md and specs/001-reliable-core/ (FR-008).
-- [x] T002 [US1] Add validated configuration and idempotent rendering in tools/manage.py (FR-001/002/004).
-- [x] T003 [US1] Repair admin authentication and read-only access in admin/app/main.py (FR-003).
-- [x] T004 [US1] Repair installation and SSH-preserving UFW setup in install.sh and scripts/ufw_open_ports.sh (FR-005).
-- [x] T005 [US2] Replace obsolete images/configuration in docker-compose.yml and render Caddy/Xray configs (FR-004).
-- [x] T006 [US3] Implement backup/restore and VLESS rotation in tools/manage.py (FR-006).
-- [x] T007 [US1/US3] Add and pass local regression tests in tests/test_regressions.py.
-- [x] T008 [US2] Pass actual TLS/VLESS/WireGuard Linux integration in tests/integration.py on both supported Ubuntu runners (FR-007, SC-003).
-- [ ] T009 [US1/US2/US3] Validate installation, DNS/public TLS, off-server traffic, reboot and recovery on a disposable server (SC-005).
+## Phase 1: Setup
 
-Do not mark T009 complete from CI alone. CI tests use isolated Docker networks, test credentials and a private test CA.
+- [x] T001 Retain constitution and current scope in `.specify/memory/constitution.md`, `specs/001-reliable-core/spec.md` (FR-008).
 
-Verified 2026-09-11 at commit 992448e27e550837ffd92df28c792141a001377b:
-- [CI run](https://github.com/evdokimenkoiv/FreeNETvpn/actions/runs/34622370547): 34 regression tests and shell syntax/lint passed.
-- Ubuntu 22.04 and 24.04: authenticated HTTPS and first-run WireGuard setup passed; a real Xray client received the HTTP probe through VLESS/WebSocket/TLS; a kernel WireGuard client recorded a handshake and received the probe through wg0.
-- The Docker WireGuard client uses an explicit route to the probe; public internet default routing and DNS remain part of T009.
+## Phase 2: Foundational
+
+- [x] T002 Validate configuration as data and preserve existing configuration bytes in `tools/manage.py` (FR-001 FR-002 SC-002).
+
+## Phase 3: US1
+
+Goal: deliver US1 as declared in spec.md (P1). Independent validation: `tests/test_regressions.py::test_administrative_routes_require_auth`.
+
+- [x] T003 [US1] Protect administrative data and the native WireGuard setup wizard in `admin/app/main.py`, `tools/manage.py` (FR-003 SC-001 US1/AC1).
+
+- [x] T004 [US1] Install the complete project while preserving SSH and refusing unrelated targets in `install.sh`, `scripts/ufw_open_ports.sh` (FR-005 US1/AC1).
+
+## Phase 4: US2
+
+Goal: deliver US2 as declared in spec.md (P1). Independent validation: `tests/test_regressions.py::test_rendered_protocol_contract`.
+
+- [x] T005 [US2] Render concrete WireGuard/Xray/Caddy configurations and verify tunnel traffic in `tools/manage.py`, `docker-compose.yml` (FR-004 SC-003 US2/AC1).
+
+## Phase 5: US3
+
+Goal: deliver US3 as declared in spec.md (P1). Independent validation: `tests/test_regressions.py::test_backup_restore_roundtrip_preserves_credentials_and_state`.
+
+- [x] T006 [US3] Create offline backups, reject unsafe or nonempty restores and roll back failed rotation in `tools/manage.py` (FR-006 SC-004 US3/AC1).
+
+## Phase 6: Polish
+
+- [x] T007 Run failing regression, bootstrap, lint and Linux integration gates in `.github/workflows/ci.yml` (FR-007).
+
+- [ ] T008 Record independent VPS installation, DNS/public CA, egress, reboot and recovery acceptance (EXTERNAL — pending) in `docs/acceptance.md` (SC-005).
+
+## Dependencies and delivery strategy
+
+Setup → foundation → stories in listed priority order → polish. The first story is the MVP; validate each story before adding the next. Shared files are edited sequentially. Existing implementations are verified rather than replaced. External tasks require an independent VPS and remain open until evidence is recorded.
+
+## Independent work opportunities
+
+After foundation, each story’s test review can be performed independently of other stories. Do not run two mutations of tools/protocols.py or tools/control.py concurrently. No task is marked [P] because the implementation tasks share state or files; read-only reviews of each story’s independent test are the parallel examples.

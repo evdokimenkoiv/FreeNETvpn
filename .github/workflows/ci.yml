@@ -6,6 +6,30 @@ on:
 permissions:
   contents: read
 jobs:
+  spec-kit:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    timeout-minutes: 10
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt -r requirements-speckit.txt
+      - run: specify version
+      - name: Official generator smoke test
+        run: specify init "${{ runner.temp }}/freenet-speckit-smoke" --integration codex --integration-options=--skills --script py --ignore-agent-tools --non-interactive
+      - name: Official feature context and template checks
+        run: python tools/check_spec_contexts.py
+      - name: Read-only structural audit (not LLM analysis)
+        run: python tools/spec_audit.py
+      - name: Adversarial artifact and actual API contract tests
+        run: python -m pytest tests/test_spec_audit.py tests/test_contracts.py -q
   checks:
     runs-on: ubuntu-24.04
     timeout-minutes: 10

@@ -1,0 +1,3 @@
+# Decisions and alternatives
+
+Decision: share strongSwan/xl2tpd for UDP 500/4500 and reject plaintext L2TP. Use official Outline by pinned digest with management on loopback; a public management listener is rejected. Compile pinned official AmneziaWG Go/tools for userspace TUN instead of requiring a custom kernel module. Persistent PKI and client identities reuse the existing archive boundary. Supported first baseline is x86_64 Ubuntu 22.04/24.04. Sources are linked in plan.md; executable proof is tests/integration_extra.py, with external applications and provider filtering left to acceptance.

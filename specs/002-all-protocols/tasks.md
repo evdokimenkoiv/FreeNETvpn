@@ -1,15 +1,43 @@
-# Tasks and evidence
+# Tasks: 002-all-protocols
 
-> Исторический этап разработки. Актуальное расширение: [003 — кабинет и шаблоны](../003-dashboard-presets/spec.md). Ограничение «read-only panel» заменено разрешёнными операциями через локальный агент; требования сохранности данных и запрет общего command API действуют.
+Generated using the official Spec Kit 1.0.6 task workflow and resolved template. Historical numbering/evidence for features 001–003 is retained in implementation-history.md. Completion below is based on verified current code; external acceptance stays open.
 
-- [x] Define scope and architecture for all protocols.
-- [x] Implement services, persistent configuration and client lifecycle.
-- [x] Pass configuration/client lifecycle regression tests.
-- [x] Pass real IKEv2 and L2TP/IPsec traffic tests on Ubuntu 22.04/24.04.
-- [x] Pass real Outline and AmneziaWG traffic tests on Ubuntu 22.04/24.04.
-- [x] Update installation, migration, operations and acceptance documentation.
-- [ ] External VPS acceptance: public ports, client applications, reboot and recovery.
+## Phase 1: Setup
 
-Verified 2026-09-11: [CI run 34625722643](https://github.com/evdokimenkoiv/FreeNETvpn/actions/runs/34625722643), commit 5b78ee930dbfb7be86f5a671b60ea3742e824d45. Both Ubuntu versions passed the existing WireGuard/VLESS tests and all four new protocol tests. New checks cover IKEv2 server certificate/EAP/CHILD_SA with a virtual-IP-bound HTTP request, IPsec transport + L2TP/MSCHAPv2/PPP traffic, Outline API TLS and Shadowsocks traffic, and AmneziaWG handshake/traffic. Outline and AmneziaWG passed traffic after restart and rejected revoked keys. Regression tests also cover persistent PKI, backups, duplicate clients and malformed names/ports.
+- [x] T001 Record restoration decisions and protocol ownership in `specs/002-all-protocols/plan.md`, `specs/002-all-protocols/data-model.md` (FR-205).
 
-The integration test runs in disposable containers. Full host reboot, root installation and independent native client/VPS acceptance remain open; they are not inferred from CI.
+## Phase 2: Foundational
+
+- [x] T002 Preserve protocol secrets and validate configuration, names and ports in `tools/protocols.py`, `tools/manage.py` (FR-205).
+
+## Phase 3: US1
+
+Goal: deliver US1 as declared in spec.md (P1). Independent validation: `tests/integration_extra.py`.
+
+- [x] T003 [US1] Implement certificate/EAP IKEv2 and protected PPP/L2TP with actual traffic checks in `services/ipsec/start.sh`, `tools/protocols.py` (FR-201 FR-202 SC-201 US1/AC1 US1/AC2).
+
+## Phase 4: US2
+
+Goal: deliver US2 as declared in spec.md (P1). Independent validation: `tests/integration_extra.py`.
+
+- [x] T004 [US2] Implement local authenticated Outline key lifecycle and pinned AmneziaWG with restart/revoke checks in `tools/protocols.py`, `services/amnezia/Dockerfile`, `docker-compose.yml` (FR-203 FR-204 SC-202 US2/AC1).
+
+## Phase 5: US3
+
+Goal: deliver US3 as declared in spec.md (P1). Independent validation: `tests/test_protocols.py::test_protocol_secrets_survive_backup_restore`.
+
+- [x] T005 [US3] Preserve v2 configuration, PKI and client secrets through preparation and backup/restore in `tools/protocols.py`, `tools/manage.py` (FR-205 SC-203 US3/AC1).
+
+## Phase 6: Polish
+
+- [x] T006 Keep all four restored protocol traffic checks on both Ubuntu baselines in `.github/workflows/ci.yml` (FR-206).
+
+- [ ] T007 Record independent VPS ports/native applications/reboot/recovery acceptance (EXTERNAL — pending) in `docs/acceptance.md` (SC-204).
+
+## Dependencies and delivery strategy
+
+Setup → foundation → stories in listed priority order → polish. The first story is the MVP; validate each story before adding the next. Shared files are edited sequentially. Existing implementations are verified rather than replaced. External tasks require an independent VPS and remain open until evidence is recorded.
+
+## Independent work opportunities
+
+After foundation, each story’s test review can be performed independently of other stories. Do not run two mutations of tools/protocols.py or tools/control.py concurrently. No task is marked [P] because the implementation tasks share state or files; read-only reviews of each story’s independent test are the parallel examples.

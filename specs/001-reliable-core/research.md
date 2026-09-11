@@ -1,0 +1,3 @@
+# Decisions and alternatives
+
+Decision: retain wg-easy's native database/setup and Xray configuration rendering instead of replacing their control planes. This preserves peer ownership and permits actual packet tests. Caddy terminates TLS and protects the separate WireGuard host. Rejected: a public Docker socket or sourcing .env as shell. The standard-library CLI provides deterministic validation and offline archives; root shell scripts handle Ubuntu setup. Existing stage references remain in plan.md. Public CA/DNS/reboot require independent acceptance; internal-CA CI proves only the declared controlled journeys.

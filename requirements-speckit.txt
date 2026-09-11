@@ -1,0 +1,2 @@
+# Developer tooling only; never installed on the VPN server.
+specify-cli==1.0.6
