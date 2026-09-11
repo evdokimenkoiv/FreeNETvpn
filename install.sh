@@ -68,7 +68,6 @@ if [[ ",$profiles," == *,ikev2,* || ",$profiles," == *,l2tp,* ]]; then
   modprobe af_key
   modprobe ppp_generic
   modprobe ppp_async
-  modprobe l2tp_ppp
   [[ -c /dev/ppp ]] || mknod /dev/ppp c 108 0
 fi
 if [[ ",$profiles," == *,amnezia,* ]]; then modprobe tun; fi

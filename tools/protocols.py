@@ -153,7 +153,7 @@ def render(config, root):
         secret += "".join(f'{name} : EAP "{value["password"]}"\n' for name, value in state["clients"]["ikev2"].items())
         manage.atomic_write(path / "ipsec.secrets", secret)
         manage.atomic_write(path / "chap-secrets", "".join(f'{name} l2tpd "{v["password"]}" *\n' for name,v in state["clients"]["l2tp"].items()))
-        manage.atomic_write(path / "xl2tpd.conf", "[global]\nport = 1701\naccess control = no\n[lns default]\nip range = 10.99.1.10-10.99.1.250\nlocal ip = 10.99.1.1\nrequire chap = yes\nrefuse pap = yes\nrequire authentication = yes\nname = l2tpd\npppoptfile = /etc/ppp/options.xl2tpd\nlength bit = yes\n")
+        manage.atomic_write(path / "xl2tpd.conf", "[global]\nport = 1701\nforce userspace = yes\naccess control = no\n[lns default]\nip range = 10.99.1.10-10.99.1.250\nlocal ip = 10.99.1.1\nrequire chap = yes\nrefuse pap = yes\nrequire authentication = yes\nname = l2tpd\npppoptfile = /etc/ppp/options.xl2tpd\nlength bit = yes\n")
         manage.atomic_write(path / "options.xl2tpd", f"require-mschap-v2\nrefuse-pap\nrefuse-chap\nrefuse-mschap\nname l2tpd\nms-dns {config['DNS1']}\nms-dns {config['DNS2']}\nauth\nmtu 1280\nmru 1280\nlock\nnodefaultroute\nlcp-echo-failure 4\nlcp-echo-interval 30\n")
     if "amnezia" in enabled and "awg" in state:
         awg = state["awg"]

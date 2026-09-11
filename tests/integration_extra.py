@@ -141,7 +141,9 @@ conn probe
   ike=aes256-sha256-modp2048!
   esp=aes256-sha256!
 ''', 'testclient : EAP "IKE-ci-password-987654321"\n')
-        payload = dc("exec", "-T", "ike-client", "curl", "-fsS", "--max-time", "20", url)
+        addresses = json.loads(dc("exec", "-T", "ike-client", "ip", "-j", "-4", "address", "show").stdout)
+        vip = next(a["local"] for iface in addresses for a in iface["addr_info"] if a["local"].startswith("10.99.0."))
+        payload = dc("exec", "-T", "ike-client", "curl", "-fsS", "--max-time", "20", "--interface", vip, url)
         assert payload.stdout == "freenet-extra-tunnel-ok"
         assert "INSTALLED" in dc("exec", "-T", "ike-client", "ipsec", "statusall").stdout
         print("PASS: IKEv2 certificate validation, EAP login, CHILD_SA and HTTP through IPsec", flush=True)
@@ -160,7 +162,7 @@ conn probe
   ike=aes256-sha256-modp2048!
   esp=aes256-sha256!
 ''', f': PSK "{state["ipsec_psk"]}"\n')
-        write("l2tp-client/xl2tpd.conf", f"[global]\nport = 1701\n[lac vpn]\nlns = {ipsec_ip}\npppoptfile = /client/options\nlength bit = yes\n")
+        write("l2tp-client/xl2tpd.conf", f"[global]\nport = 1701\nforce userspace = yes\n[lac vpn]\nlns = {ipsec_ip}\npppoptfile = /client/options\nlength bit = yes\n")
         write("l2tp-client/options", 'name testclient\npassword L2TP-ci-password-987654321\nnoauth\nrefuse-eap\nnoccp\nnoipdefault\nipcp-accept-local\nipcp-accept-remote\nmtu 1280\nmru 1280\n')
         dc("exec", "-T", "l2tp-client", "sh", "-c", "mkdir -p /run/xl2tpd; xl2tpd -c /client/xl2tpd.conf; sleep 1; echo 'c vpn' > /run/xl2tpd/l2tp-control")
         eventually(lambda: dc("exec", "-T", "l2tp-client", "ip", "address", "show", "ppp0"))

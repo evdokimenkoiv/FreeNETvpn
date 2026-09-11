@@ -58,7 +58,6 @@ jobs:
           sudo modprobe af_key
           sudo modprobe ppp_generic
           sudo modprobe ppp_async
-          sudo modprobe l2tp_ppp
           sudo modprobe tun
           test -c /dev/ppp || sudo mknod /dev/ppp c 108 0
       - name: Actual IKEv2, L2TP, Outline and AmneziaWG traffic
