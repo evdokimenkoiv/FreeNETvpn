@@ -122,13 +122,16 @@ def main():
         assert login["status"] == "success", login
         peer = json.loads(web("/api/client", host=config["WG_DOMAIN"], auth=True, body={"name": "CI-test-client", "expiresAt": None}))
         wireguard = web(f"/api/client/{peer['clientId']}/configuration", host=config["WG_DOMAIN"], auth=True)
-        # Avoid changing the test container DNS; payload uses a literal IP.
+        # Keep Docker's own routing/DNS; explicitly route the probe through wg0.
+        # wg-quick's full-default-route setup writes read-only /proc/sys in Docker.
         wireguard = "\n".join(line for line in wireguard.splitlines() if not line.startswith("DNS =")) + "\n"
+        wireguard = wireguard.replace("[Interface]", "[Interface]\nTable = off")
         (runtime / "wg-client/wg0.conf").write_text(wireguard)
         dc("up", "-d", "--build", "wg-client")
         dc("exec", "-T", "wg-client", "wg-quick", "up", "wg0")
         echo_id = dc("ps", "-q", "echo-server").stdout.strip()
         echo_ip = run(["docker", "inspect", "-f", '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', echo_id]).stdout.strip()
+        dc("exec", "-T", "wg-client", "ip", "route", "add", echo_ip + "/32", "dev", "wg0")
         packet = dc("exec", "-T", "wg-client", "curl", "-fsS", "--max-time", "20", "--interface", "wg0", f"http://{echo_ip}:18080/probe.txt")
         assert packet.stdout == "freenetvpn-tunnel-ok"
         handshakes = dc("exec", "-T", "wg-client", "wg", "show", "wg0", "latest-handshakes").stdout.splitlines()

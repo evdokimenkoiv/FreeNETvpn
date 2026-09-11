@@ -66,15 +66,17 @@ def auth_check(config=Depends(authenticated)):
 @app.get("/admin/", response_class=HTMLResponse)
 def index(config=Depends(authenticated)):
     wg = html.escape(config["wg_domain"], quote=True)
+    wg_link = f'<li><a href="https://{wg}/">WireGuard — клиенты и QR-коды</a></li>' if "wireguard" in config["services"] else ""
+    vless_help = '<p>Профиль VLESS: <code>sudo bash menu.sh</code> на сервере.</p>' if "vless" in config["services"] else ""
     return f"""<!doctype html><html lang="ru"><meta charset="utf-8">
     <meta name="viewport" content="width=device-width"><title>FreeNETvpn</title>
     <style>body{{font:18px system-ui;max-width:760px;margin:6vh auto;padding:24px;background:#101827;color:#edf3ff}}
     a{{color:#88d9ff}}li{{margin:18px 0}}code{{background:#22314a;padding:4px}}</style>
     <h1>FreeNETvpn</h1><p>Управление вашим VPN-сервером</p><ul>
-    <li><a href="https://{wg}/">WireGuard — клиенты и QR-коды</a></li>
+    {wg_link}
     <li><a href="/admin/status">Доступность сервисов</a></li>
     <li><a href="/admin/backups">Готовые резервные копии</a></li></ul>
-    <p>Профиль VLESS: <code>sudo ./menu.sh</code> на сервере.</p>
+    {vless_help}
     <p>Создание полной резервной копии: <code>sudo bash scripts/backup.sh</code>.</p>
     <p>Статус TCP-портов не подтверждает прохождение VPN-трафика.</p></html>"""
 
