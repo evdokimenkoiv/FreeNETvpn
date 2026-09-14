@@ -5,6 +5,7 @@ Uses disposable credentials and containers, never a running FreeNET installation
 MTProxy protocol/native acceptance is reported separately from this readiness check.
 """
 import json
+import ipaddress
 import secrets
 import socket
 import subprocess
@@ -73,6 +74,7 @@ def main():
             for kind in ['http', 'socks5h']:
                 response = request(kind)
                 assert response.returncode == 0, kind + ' HTTPS traffic failed: ' + response.stderr
+                public_ip = str(ipaddress.IPv4Address(response.stdout.strip()))
                 assert request(kind, False).returncode != 0, kind + ' allowed anonymous traffic'
                 assert request(kind, 'wrong').returncode != 0, kind + ' allowed wrong password'
                 for target in ['http://127.0.0.1:3128', 'http://169.254.169.254', 'http://localhost:3128']:
@@ -83,7 +85,8 @@ def main():
                 assert request(kind).returncode != 0, 'Revoked password accepted'
                 assert request(kind, False).returncode != 0, 'Empty inventory became anonymous'
             run('docker', 'build', '-t', mt, str(ROOT / 'services/mtproto'))
-            public_ip = run('curl', '-fsS', '--max-time', '15', 'https://api.ipify.org').stdout.strip()
+            # Use the observed Docker egress, not the runner host's HTTP route
+            # (which may use a different proxy/NAT address).
             run('docker', 'run', '-d', '--name', mt, '--ulimit', 'nofile=131072:131072', '-p', '127.0.0.1:28443:8443',
                 '-e', 'FREENET_PUBLIC_IP=' + public_ip, '-v', str(root / 'runtime/mtproto.json') + ':/config/mtproto.json:ro', '-v', str(root / 'data/mtproto') + ':/data', mt)
             wait_port(28443)
@@ -94,7 +97,14 @@ def main():
                 time.sleep(2)
             assert health == 'healthy', 'MTProxy stats endpoint unhealthy'
             secret = state['mtproto_empty_secret']
-            assert probe('127.0.0.1', 28443, secret)
+            for attempt in range(3):
+                try:
+                    assert probe('127.0.0.1', 28443, secret)
+                    break
+                except OSError:
+                    if attempt == 2:
+                        raise
+                    time.sleep(5)
             try:
                 probe('127.0.0.1', 28443, secrets.token_hex(16), timeout=3)
             except (OSError, ConnectionError):
