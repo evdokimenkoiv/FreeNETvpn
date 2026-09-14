@@ -14,7 +14,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python tests/integration_proxy.py
+      - name: Proxy traffic and daemon authentication boundaries
+        run: python tests/integration_proxy.py --local-mtproto
   spec-kit:
     runs-on: ${{ matrix.os }}
     strategy:

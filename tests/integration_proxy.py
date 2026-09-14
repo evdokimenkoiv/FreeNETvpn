@@ -6,6 +6,7 @@ MTProxy protocol/native acceptance is reported separately from this readiness ch
 """
 import json
 import ipaddress
+import argparse
 import secrets
 import socket
 import subprocess
@@ -36,6 +37,9 @@ def wait_port(port):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--local-mtproto', action='store_true', help='Verify MTProto auth/rotation via daemon counters without requiring a Telegram upstream response')
+    options = parser.parse_args()
     suffix = secrets.token_hex(4)
     px, mt = 'freenet-proxy-test-' + suffix, 'freenet-mt-test-' + suffix
     with tempfile.TemporaryDirectory() as folder:
@@ -87,31 +91,53 @@ def main():
             run('docker', 'build', '-t', mt, str(ROOT / 'services/mtproto'))
             # Use the observed Docker egress, not the runner host's HTTP route
             # (which may use a different proxy/NAT address).
-            run('docker', 'run', '-d', '--name', mt, '--ulimit', 'nofile=131072:131072', '-p', '127.0.0.1:28443:8443',
-                '-e', 'FREENET_PUBLIC_IP=' + public_ip, '-v', str(root / 'runtime/mtproto.json') + ':/config/mtproto.json:ro', '-v', str(root / 'data/mtproto') + ':/data', mt)
-            wait_port(28443)
-            for _ in range(30):
-                health = run('docker', 'inspect', '--format', '{{.State.Health.Status}}', mt).stdout.strip()
-                if health == 'healthy':
-                    break
-                time.sleep(2)
-            assert health == 'healthy', 'MTProxy stats endpoint unhealthy'
-            secret = state['mtproto_empty_secret']
-            for attempt in range(3):
+            def start_mt():
+                run('docker', 'run', '-d', '--name', mt, '--ulimit', 'nofile=131072:131072', '-p', '127.0.0.1:28443:8443',
+                    '-e', 'FREENET_PUBLIC_IP=' + public_ip, '-v', str(root / 'runtime/mtproto.json') + ':/config/mtproto.json:ro', '-v', str(root / 'data/mtproto') + ':/data', mt)
+                wait_port(28443)
+                for _ in range(30):
+                    health = run('docker', 'inspect', '--format', '{{.State.Health.Status}}', mt).stdout.strip()
+                    if health == 'healthy':
+                        break
+                    time.sleep(2)
+                assert health == 'healthy', 'MTProxy stats endpoint unhealthy'
+            def parsed_queries():
+                # Upstream increments these only after decrypting and parsing a
+                # valid MTProto packet, even when a Telegram target is unavailable.
+                result = run('docker', 'exec', mt, 'python3', '-c', "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8888/stats',timeout=3).read().decode())").stdout
+                fields = dict(line.split('\t', 1) for line in result.splitlines() if '\t' in line)
+                return int(fields['tot_forwarded_queries']) + int(fields['dropped_queries'])
+            def credential_check(key, accepted):
+                before = parsed_queries()
                 try:
-                    assert probe('127.0.0.1', 28443, secret)
-                    break
+                    probe('127.0.0.1', 28443, key, timeout=2)
                 except OSError:
-                    if attempt == 2:
-                        raise
-                    time.sleep(5)
-            try:
-                probe('127.0.0.1', 28443, secrets.token_hex(16), timeout=3)
-            except (OSError, ConnectionError):
-                pass
+                    pass  # This assertion measures parsing, not upstream reachability.
+                time.sleep(2)
+                after = parsed_queries()
+                assert (after > before) == accepted, 'MTProxy secret authentication boundary failed'
+            start_mt()
+            secret = state['mtproto_empty_secret']
+            credential_check(secret, True)
+            credential_check(secrets.token_hex(16), False)
+            run('docker', 'rm', '-f', mt)
+            state['mtproto_empty_secret'] = secrets.token_hex(16)
+            protocols.save(state, root); protocols.render(config, root); start_mt()
+            credential_check(secret, False)
+            credential_check(state['mtproto_empty_secret'], True)
+            if options.local_mtproto:
+                print('NOT RUN: Telegram upstream resPQ roundtrip (--local-mtproto). Run without this flag on the deployment network.')
             else:
-                raise AssertionError('MTProxy accepted an unknown secret')
-            print('PASS: HTTP/SOCKS HTTPS traffic, missing/wrong/revoked credentials, private destinations, empty inventory; MTProxy build/TCP/stats and Telegram resPQ nonce roundtrip/unknown-secret denial. Native Telegram acceptance is separate.')
+                for attempt in range(3):
+                    try:
+                        assert probe('127.0.0.1', 28443, state['mtproto_empty_secret'])
+                        break
+                    except OSError:
+                        if attempt == 2:
+                            raise
+                        time.sleep(5)
+                print('PASS: Telegram upstream resPQ nonce roundtrip. Native app acceptance is separate.')
+            print('PASS: HTTP/SOCKS HTTPS traffic, missing/wrong/revoked credentials, private destinations and empty inventory; MTProxy build/TCP/stats, parsed authenticated packets and unknown/revoked secret rejection.')
         finally:
             if sys.exc_info()[0]:
                 for container in (px, mt):
