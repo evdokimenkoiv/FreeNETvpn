@@ -132,6 +132,10 @@ services:
     build: ./services/mtproto
     profiles: [mtproto]
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 131072
+        hard: 131072
     read_only: true
     tmpfs: [/tmp]
     security_opt: ["no-new-privileges:true"]

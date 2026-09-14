@@ -84,7 +84,7 @@ def main():
                 assert request(kind, False).returncode != 0, 'Empty inventory became anonymous'
             run('docker', 'build', '-t', mt, str(ROOT / 'services/mtproto'))
             public_ip = run('curl', '-fsS', '--max-time', '15', 'https://api.ipify.org').stdout.strip()
-            run('docker', 'run', '-d', '--name', mt, '-p', '127.0.0.1:28443:8443',
+            run('docker', 'run', '-d', '--name', mt, '--ulimit', 'nofile=131072:131072', '-p', '127.0.0.1:28443:8443',
                 '-e', 'FREENET_PUBLIC_IP=' + public_ip, '-v', str(root / 'runtime/mtproto.json') + ':/config/mtproto.json:ro', '-v', str(root / 'data/mtproto') + ':/data', mt)
             wait_port(28443)
             for _ in range(30):
