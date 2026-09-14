@@ -9,9 +9,6 @@ from datetime import datetime, timezone
 import manage
 from operation_lock import locked
 
-PROTOCOLS = {'wireguard', 'vless', 'ikev2', 'l2tp', 'outline', 'amnezia'}
-
-
 def verify(password, encoded):
     try:
         algorithm, rounds, salt, digest = encoded.split(':')

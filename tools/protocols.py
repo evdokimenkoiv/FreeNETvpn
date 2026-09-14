@@ -202,6 +202,10 @@ def check(config, root):
         manage.compose(["exec", "-T", "amnezia", "awg", "show", "awg0", "public-key"], root, capture=True)
     if "outline" in enabled:
         outline_api(config, root, "access-keys")
+    if "proxy" in enabled:
+        manage.compose(["exec", "-T", "proxy", "/usr/local/bin/xray", "run", "-test", "-config", "/etc/xray/config.json"], root, capture=True)
+    if "mtproto" in enabled:
+        manage.compose(["exec", "-T", "mtproto", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8888/stats', timeout=3).read()"], root, capture=True)
     print("Enabled protocol daemons/API ready; verify traffic with an external client")
 
 

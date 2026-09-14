@@ -22,7 +22,7 @@ def render(config, state, root):
         value = {"log": {"loglevel": "warning"}, "inbounds": [
             {"tag": "http", "listen": "0.0.0.0", "port": 3128, "protocol": "http", "settings": {"accounts": accounts, "allowTransparent": False}},
             {"tag": "socks", "listen": "0.0.0.0", "port": 1080, "protocol": "socks", "settings": {"auth": "password", "accounts": accounts, "udp": False}}],
-            "outbounds": [{"tag": "direct", "protocol": "freedom", "settings": {"domainStrategy": "UseIP"}}, {"tag": "blocked", "protocol": "blackhole"}],
+            "outbounds": [{"tag": "direct", "protocol": "freedom", "settings": {"domainStrategy": "UseIP"}}, {"tag": "blocked", "protocol": "blackhole", "settings": {"response": {"type": "http"}}}],
             "routing": {"domainStrategy": "IPOnDemand", "rules": [
                 {"type": "field", "domain": ["full:" + config["DOMAIN"], "full:" + config["WG_DOMAIN"]], "outboundTag": "blocked"},
                 {"type": "field", "ip": NON_PUBLIC, "outboundTag": "blocked"}]}}
@@ -33,4 +33,4 @@ def render(config, state, root):
         keys = [p["secret"] for p in state["clients"]["mtproto"].values()]
         if len(keys) > 16:
             raise ValueError("MTProto supports at most 16 profiles per server")
-        manage.atomic_write(root / "runtime/mtproto.json", json.dumps({"secrets": keys or [state["mtproto_empty_secret"]]}))
+        manage.atomic_write(root / "runtime/mtproto.json", json.dumps({"server": config["DOMAIN"], "secrets": keys or [state["mtproto_empty_secret"]]}))

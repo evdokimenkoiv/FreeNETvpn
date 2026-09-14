@@ -1,9 +1,11 @@
 """Supervise upstream MTProxy and refresh its Telegram routes daily."""
 import json
+import ipaddress
 import os
 from pathlib import Path
 import re
 import signal
+import socket
 import subprocess
 import time
 from urllib.request import urlopen
@@ -48,7 +50,14 @@ def main():
         raise ValueError('Invalid MTProto secret inventory')
     CACHE.mkdir(parents=True, exist_ok=True)
     refresh()
+    public_ip = os.getenv('FREENET_PUBLIC_IP') or socket.gethostbyname(config['server'])
+    if not ipaddress.IPv4Address(public_ip).is_global:
+        raise ValueError('MTProto requires a public IPv4 endpoint')
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as route:
+        route.connect((public_ip, 443))
+        private_ip = route.getsockname()[0]
     args = ['/usr/local/bin/mtproto-proxy', '--http-stats', '-p', '8888', '-H', '8443', '-M', '1', '--aes-pwd', str(CACHE / 'proxy-secret'), str(CACHE / 'proxy-multi.conf')]
+    args += ['--nat-info', private_ip + ':' + public_ip]
     for key in keys:
         args += ['-S', key]
     # Source requires root initialization then drops daemon privileges.

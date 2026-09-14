@@ -53,6 +53,16 @@ def main():
             run('docker', 'run', '-d', '--name', px, '-p', '127.0.0.1:23128:3128', '-p', '127.0.0.1:21080:1080',
                 '-v', str(root / 'runtime/proxy.json') + ':/etc/xray/config.json:ro', image, 'run', '-config', '/etc/xray/config.json')
             wait_port(23128); wait_port(21080)
+            # Docker's host listener can accept before Xray starts. Require an
+            # actual HTTP authentication challenge, including after revocation.
+            for _ in range(30):
+                ready = run('curl', '-sS', '--max-time', '2', '--noproxy', '', '--proxy', 'http://127.0.0.1:23128',
+                            '-o', '/dev/null', '-w', '%{http_code}', 'http://example.com', check=False)
+                if ready.returncode == 0 and ready.stdout == '407':
+                    break
+                time.sleep(1)
+            else:
+                raise AssertionError('HTTP proxy did not become ready with mandatory authentication')
         def request(kind, credentials=True, target='https://api.ipify.org'):
             args = ['curl', '-fsS', '--max-time', '15', '--noproxy', '', '--proxy', f'{kind}://127.0.0.1:' + ('23128' if kind == 'http' else '21080')]
             if credentials:
@@ -73,8 +83,9 @@ def main():
                 assert request(kind).returncode != 0, 'Revoked password accepted'
                 assert request(kind, False).returncode != 0, 'Empty inventory became anonymous'
             run('docker', 'build', '-t', mt, str(ROOT / 'services/mtproto'))
+            public_ip = run('curl', '-fsS', '--max-time', '15', 'https://api.ipify.org').stdout.strip()
             run('docker', 'run', '-d', '--name', mt, '-p', '127.0.0.1:28443:8443',
-                '-v', str(root / 'runtime/mtproto.json') + ':/config/mtproto.json:ro', '-v', str(root / 'data/mtproto') + ':/data', mt)
+                '-e', 'FREENET_PUBLIC_IP=' + public_ip, '-v', str(root / 'runtime/mtproto.json') + ':/config/mtproto.json:ro', '-v', str(root / 'data/mtproto') + ':/data', mt)
             wait_port(28443)
             for _ in range(30):
                 health = run('docker', 'inspect', '--format', '{{.State.Health.Status}}', mt).stdout.strip()
