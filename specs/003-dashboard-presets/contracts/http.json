@@ -1,39 +1,283 @@
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "format": "FreeNETvpn consumer contract; not an OpenAPI document",
   "authentication": {
     "session": "freenet_session; Secure, HttpOnly, SameSite=strict, Path=/admin, expires after 8 hours; lost on web restart",
     "basic": "Supported for legacy reads and automation; mutation requires Origin=https://DOMAIN and X-FreeNET-Request: 1",
     "csrf": "Session mutations require Origin=https://DOMAIN and X-CSRF-Token from login/session response",
     "private_headers": "Cache-Control: no-store; CSP permits only local assets; no Basic challenge for /admin/api/*",
-    "public_assets": "/admin/assets/ serves static files; public /healthz reports web health only"
+    "public_assets": "/admin/assets/ serves static files; public /healthz reports web health only",
+    "revision": "Every request checks current account revision/enabled state; deleted/recreated usernames cannot reuse old sessions."
   },
-  "login": {"username_max": 64, "password_max": 1024, "minimum_length": 1, "extra_fields": "forbidden", "attempts_per_minute": 12, "session_limit": 100},
+  "login": {
+    "username_max": 64,
+    "password_max": 1024,
+    "minimum_length": 1,
+    "extra_fields": "forbidden",
+    "attempts_per_minute": 12,
+    "session_limit": 1000,
+    "rate_limit_key": "case-folded username"
+  },
   "routes": [
-    {"method":"POST","path":"/admin/api/login","anonymous_status":422,"success":200,"response":"username, csrf; sets session cookie","errors":[401,403,422,429]},
-    {"method":"GET","path":"/admin/api/session","anonymous_status":401,"success":200,"response":"username, csrf (null for Basic), domain"},
-    {"method":"POST","path":"/admin/api/logout","anonymous_status":401,"success":200,"response":"ok=true; clears cookie","errors":[401,403]},
-    {"method":"GET","path":"/admin/api/overview","anonymous_status":401,"success":200,"response":"actual server/services/clients/backups/jobs/presets/messages snapshot","errors":[401,400,503]},
-    {"method":"POST","path":"/admin/api/jobs","anonymous_status":401,"success":202,"response":"queued job or retained job with duplicate request_id","errors":[400,401,403,413,422,503]},
-    {"method":"GET","path":"/admin/api/export","anonymous_status":401,"success":200,"query":"protocol, name, format=default|json|bundle","response":"base64 export object; IKEv2 is always ZIP, named VLESS supports JSON","errors":[400,401,422,503]},
-    {"method":"GET","path":"/admin/api/qr","anonymous_status":401,"success":200,"query":"protocol, name; wireguard/vless/amnezia/outline only","response":"image/svg+xml generated locally","errors":[400,401,422,503]},
-    {"method":"GET","path":"/healthz","anonymous_status":200,"success":200,"response":"status=ok (web process, not VPN reachability)"},
-    {"method":"GET","path":"/auth","anonymous_status":401,"success":200,"response":"forward-auth check; Basic challenge on failure"},
-    {"method":"GET","path":"/admin/","anonymous_status":401,"success":200,"response":"HTML cabinet or 401 HTML login page"},
-    {"method":"GET","path":"/admin","anonymous_status":401,"success":200,"response":"HTML cabinet or 401 HTML login page"},
-    {"method":"GET","path":"/admin/status","anonymous_status":401,"success":200,"response":"legacy selected-service TCP status; not internet egress"},
-    {"method":"GET","path":"/admin/backups","anonymous_status":401,"success":200,"response":"backup metadata"},
-    {"method":"GET","path":"/admin/backup","anonymous_status":401,"success":200,"response":"latest archive; 404 when absent"},
-    {"method":"GET","path":"/admin/backups/{filename}","anonymous_status":401,"success":200,"response":"validated named archive; 404 for invalid/missing/symlink file"}
+    {
+      "method": "POST",
+      "path": "/admin/api/login",
+      "anonymous_status": 422,
+      "success": 200,
+      "response": "username, csrf; sets session cookie",
+      "errors": [
+        401,
+        403,
+        422,
+        429
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/api/session",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "username, csrf (null for Basic), domain"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/logout",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "ok=true; clears cookie",
+      "errors": [
+        401,
+        403
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/api/overview",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "actual server/services/clients/backups/jobs/presets/messages snapshot",
+      "errors": [
+        401,
+        400,
+        503
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/jobs",
+      "anonymous_status": 401,
+      "success": 202,
+      "response": "queued job or retained job with duplicate request_id",
+      "errors": [
+        400,
+        401,
+        403,
+        413,
+        422,
+        503
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/api/export",
+      "anonymous_status": 401,
+      "success": 200,
+      "query": "protocol, name, format=default|json|bundle",
+      "response": "base64 export object; IKEv2 is always ZIP, named VLESS supports JSON",
+      "errors": [
+        400,
+        401,
+        422,
+        503
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/api/qr",
+      "anonymous_status": 401,
+      "success": 200,
+      "query": "protocol, name; wireguard/vless/amnezia/outline/mtproto only",
+      "response": "image/svg+xml generated locally",
+      "errors": [
+        400,
+        401,
+        422,
+        503
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "anonymous_status": 200,
+      "success": 200,
+      "response": "status=ok (web process, not VPN reachability)"
+    },
+    {
+      "method": "GET",
+      "path": "/auth",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "forward-auth check; Basic challenge on failure"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "HTML cabinet or 401 HTML login page"
+    },
+    {
+      "method": "GET",
+      "path": "/admin",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "HTML cabinet or 401 HTML login page"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/status",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "legacy selected-service TCP status; not internet egress"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/backups",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "backup metadata"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/backup",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "latest archive; 404 when absent"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/backups/{filename}",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "validated named archive; 404 for invalid/missing/symlink file"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/api/users",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "admin-only account list and audit",
+      "errors": [
+        400,
+        401,
+        403,
+        422,
+        503
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/users",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "admin-only create/update account; password hashes never returned",
+      "errors": [
+        400,
+        401,
+        403,
+        422,
+        503
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/api/users/{username}",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "admin-only account deletion; protected owner and self-deletion rejected",
+      "errors": [
+        400,
+        401,
+        403,
+        422,
+        503
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/password",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "non-owner password change with current password; invalidates sessions",
+      "errors": [
+        400,
+        401,
+        403,
+        422,
+        503
+      ]
+    }
   ],
-  "operations": ["client.add","client.revoke","client.preset","service.restart","service.start","service.stop","backup.create","wireguard.connect"],
-  "job_request": {"required":["operation","request_id"],"optional":["protocol","name","preset","username","password"],"unknown_fields":"rejected","request_id_pattern":"[a-f0-9-]{32,36}","client_name_pattern":"[A-Za-z0-9_-]{1,32}"},
-  "queued_job_fields": ["id","operation","title","protocol","name","status","created"],
-  "job_states": ["queued","running","done","failed","interrupted"],
-  "export_fields": ["filename","media_type","content"],
-  "agent_methods": ["snapshot","submit","export"],
+  "operations": [
+    "client.add",
+    "client.revoke",
+    "client.preset",
+    "service.restart",
+    "service.start",
+    "service.stop",
+    "backup.create",
+    "wireguard.connect"
+  ],
+  "job_request": {
+    "required": [
+      "operation",
+      "request_id"
+    ],
+    "optional": [
+      "protocol",
+      "name",
+      "preset",
+      "username",
+      "password"
+    ],
+    "unknown_fields": "rejected",
+    "request_id_pattern": "[a-f0-9-]{32,36}",
+    "client_name_pattern": "[A-Za-z0-9_-]{1,32}"
+  },
+  "queued_job_fields": [
+    "id",
+    "operation",
+    "title",
+    "protocol",
+    "name",
+    "status",
+    "created"
+  ],
+  "job_states": [
+    "queued",
+    "running",
+    "done",
+    "failed",
+    "interrupted"
+  ],
+  "export_fields": [
+    "filename",
+    "media_type",
+    "content"
+  ],
+  "agent_methods": [
+    "snapshot",
+    "submit",
+    "export",
+    "accounts",
+    "account_export"
+  ],
   "agent_request_max_bytes": 65536,
   "agent_timeout_seconds": 35,
   "queue_capacity": 32,
-  "history_capacity": 100
+  "history_capacity": 100,
+  "roles": {
+    "admin": "all administrative operations; original owner protected",
+    "user": "assigned profile exports/QR, own session/password and filtered overview only"
+  }
 }

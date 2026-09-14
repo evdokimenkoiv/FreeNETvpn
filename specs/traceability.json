@@ -1028,6 +1028,349 @@
         ],
         "status": "automated"
       }
+    ],
+    "005-multiuser-workspace": [
+      {
+        "ref": "FR-501",
+        "tasks": [
+          "T001"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-504",
+        "tasks": [
+          "T002"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-502",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-508",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-503",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-501",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-505",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-506",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-502",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US3/AC1",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-507",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "docs/images/README.md"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US4/AC1",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "docs/images/README.md"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-503",
+        "tasks": [
+          "T007"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      }
+    ],
+    "006-proxy-recovery": [
+      {
+        "ref": "FR-601",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-602",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-603",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-604",
+        "tasks": [
+          "T001",
+          "T004"
+        ],
+        "implementation": [
+          "docs/recovery.en.md"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-601",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-602",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "docs/acceptance.md"
+        ],
+        "status": "external"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T001",
+          "T004"
+        ],
+        "implementation": [
+          "docs/recovery.en.md"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      }
     ]
   }
 }

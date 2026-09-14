@@ -31,5 +31,10 @@ if [[ ",$profiles," == *,outline,* ]]; then
   ufw allow "$(manage get OUTLINE_PORT)/udp"
 fi
 if [[ ",$profiles," == *,amnezia,* ]]; then ufw allow "$(manage get AWG_PORT)/udp"; fi
+if [[ ",$profiles," == *,mtproto,* ]]; then ufw allow "$(manage get MTPROTO_PORT)/tcp"; fi
+if [[ ",$profiles," == *,proxy,* ]]; then
+  ufw allow "$(manage get HTTP_PROXY_PORT)/tcp"
+  ufw allow "$(manage get SOCKS_PROXY_PORT)/tcp"
+fi
 ufw --force enable
 echo "Firewall rules added; SSH configuration and existing rules preserved."

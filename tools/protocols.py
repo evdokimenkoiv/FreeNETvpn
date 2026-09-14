@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 import manage
 import presets
 
-EXTRA = {"ikev2", "l2tp", "outline", "amnezia"}
+EXTRA = {"ikev2", "l2tp", "outline", "amnezia", "mtproto", "proxy"}
 
 
 def command(*args, data=None):
@@ -34,7 +34,7 @@ def state_file(root):
 
 def read_state(root):
     state = json.loads(state_file(root).read_text()) if state_file(root).exists() else {"version": 1, "clients": {}}
-    for protocol in ("ikev2", "l2tp", "amnezia", "vless"):
+    for protocol in ("ikev2", "l2tp", "amnezia", "vless", "mtproto", "proxy"):
         state["clients"].setdefault(protocol, {})
     return state
 
@@ -99,6 +99,11 @@ def prepare(config, root):
         current = json.loads(server_config.read_text()) if server_config.exists() else {}
         current.update(hostname=config["DOMAIN"], portForNewAccessKeys=int(config["OUTLINE_PORT"]), metricsEnabled=False)
         manage.atomic_write(server_config, json.dumps(current))
+    if "mtproto" in enabled:
+        state.setdefault("mtproto_empty_secret", secrets.token_hex(16))
+        (root / "data/mtproto").mkdir(parents=True, exist_ok=True)
+    if "proxy" in enabled:
+        state.setdefault("proxy_empty_password", secrets.token_urlsafe(48))
     save(state, root)
     render(config, root)
 
@@ -111,6 +116,8 @@ def render(config, root):
     if not state_file(root).exists():
         return
     state = read_state(root)
+    import proxy_config
+    proxy_config.render(config, state, root)
     path = root / "runtime/ipsec"
     if enabled & {"ikev2", "l2tp"} and "ipsec_psk" in state:
         path.mkdir(parents=True, exist_ok=True)
@@ -210,7 +217,14 @@ def export_client(protocol, name, config, state, root):
         manage.atomic_write(path, matches[0]["accessUrl"] + "\n")
     else:
         peer = state["clients"][protocol][name]
-        if protocol == "amnezia":
+        if protocol == "mtproto":
+            from urllib.parse import urlencode
+            path = folder / f"{name}.txt"
+            manage.atomic_write(path, "tg://proxy?" + urlencode(dict(server=config["DOMAIN"], port=config["MTPROTO_PORT"], secret="dd" + peer["secret"])) + "\n")
+        elif protocol == "proxy":
+            path = folder / f"{name}.json"
+            manage.atomic_write(path, json.dumps(dict(server=config["DOMAIN"], username=name, password=peer["password"], http_port=int(config["HTTP_PROXY_PORT"]), socks5_port=int(config["SOCKS_PROXY_PORT"]), udp=False, transport_encrypted=False), indent=2) + "\n")
+        elif protocol == "amnezia":
             awg = state["awg"]
             profile = presets.get("amnezia", peer.get("preset"))
             content = f'[Interface]\nPrivateKey = {peer["private"]}\nAddress = {peer["address"]}/32\nDNS = {config["DNS1"]}, {config["DNS2"]}\nMTU = {profile["mtu"]}\n'
@@ -294,6 +308,10 @@ def _client(action, protocol, name, root, preset=None):
                 if not address:
                     raise ValueError("Client address pool exhausted")
                 peers[name] = {**keypair(), "address": address}
+            elif protocol == "mtproto":
+                if len(peers) >= 16:
+                    raise ValueError("MTProto supports at most 16 profiles per server")
+                peers[name] = {"secret": secrets.token_hex(16)}
             elif protocol == "vless":
                 peers[name] = {"uuid": str(uuid.uuid4())}
             else:
@@ -310,10 +328,11 @@ def _client(action, protocol, name, root, preset=None):
             save(state, root)
             manage.render(config, root)
             # Recreate closes existing sessions after revocation and refreshes bind mounts.
-            service = {"amnezia": "amnezia", "vless": "xray"}.get(protocol, "ipsec")
-            if protocol == "vless":
+            service = {"amnezia": "amnezia", "vless": "xray", "mtproto": "mtproto", "proxy": "proxy"}.get(protocol, "ipsec")
+            if protocol in {"vless", "proxy", "mtproto"}:
                 try:
-                    manage.compose(["run", "--rm", "--no-deps", "xray", "run", "-test", "-config", "/etc/xray/config.json"], root)
+                    if protocol != "mtproto":
+                        manage.compose(["run", "--rm", "--no-deps", service, "run", "-test", "-config", "/etc/xray/config.json"], root)
                     manage.compose(["up", "-d", "--force-recreate", "--wait", service], root)
                 except Exception:
                     save(previous, root)

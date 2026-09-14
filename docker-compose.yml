@@ -116,7 +116,33 @@ services:
     volumes: ["./runtime/amnezia:/config:ro"]
     networks: [backend]
 
+  proxy:
+    image: ghcr.io/xtls/xray-core:26.3.27
+    profiles: [proxy]
+    restart: unless-stopped
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    command: ["run", "-config", "/etc/xray/config.json"]
+    ports: ["${HTTP_PROXY_PORT:-3128}:3128/tcp", "${SOCKS_PROXY_PORT:-1080}:1080/tcp"]
+    volumes: ["./runtime/proxy.json:/etc/xray/config.json:ro"]
+    networks: [proxy_egress]
+
+  mtproto:
+    build: ./services/mtproto
+    profiles: [mtproto]
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID]
+    ports: ["${MTPROTO_PORT:-8443}:8443/tcp"]
+    volumes: ["./runtime/mtproto.json:/config/mtproto.json:ro", "./data/mtproto:/data"]
+    networks: [proxy_egress]
+
 networks:
   backend: {}
+  proxy_egress: {}
 volumes:
   caddy_config: {}

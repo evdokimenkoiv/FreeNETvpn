@@ -8,6 +8,7 @@ from pathlib import Path
 import socketserver
 
 from control import Controller
+from operation_lock import locked
 
 
 class Handler(socketserver.StreamRequestHandler):
@@ -23,6 +24,25 @@ class Handler(socketserver.StreamRequestHandler):
             method = request.get("method")
             if method == "snapshot":
                 result = self.server.controller.snapshot()
+            elif method == "accounts":
+                data = request.get("data", {})
+                if not isinstance(data, dict) or set(data) != {"action", "values"}:
+                    raise ValueError("Invalid account request")
+                clients = self.server.controller.snapshot()["clients"] if data["action"] == "save" else None
+                result = self.server.controller.accounts.dispatch(data["action"], data["values"], clients)
+            elif method == "account_export":
+                data = request.get("data", {})
+                if not isinstance(data, dict) or set(data) - {"username", "protocol", "name", "format"}:
+                    raise ValueError("Invalid export fields")
+                with locked(self.server.controller.root):
+                    user = self.server.controller.accounts.get(data.get("username"))
+                    clients = self.server.controller.snapshot()["clients"]
+                    matching = [c for c in clients if c["protocol"] == data.get("protocol") and c["name"] == data.get("name")]
+                    if not user or not user["enabled"] or len(matching) != 1 or not any(
+                        all(g.get(k) == matching[0].get(k) for k in ("protocol", "name", "identity")) for g in user["grants"]
+                    ):
+                        raise ValueError("Profile access denied")
+                    result = self.server.controller.export(**{k: v for k, v in data.items() if k != "username"})
             elif method == "submit":
                 result = self.server.controller.submit(request.get("data"))
             elif method == "export":

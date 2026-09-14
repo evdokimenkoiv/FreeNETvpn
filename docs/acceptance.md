@@ -21,3 +21,7 @@ Use a disposable Ubuntu 22.04/24.04/26.04 server and a client on a different net
 CI verifies encrypted transport inside temporary Linux Docker networks using test certificates. It does not prove public UDP reachability, provider firewall behavior, public CA issuance, regional availability, native client UI imports or a full root installer run on the target VPS.
 
 Recorded Ubuntu 26.04 VPS results: [qualification report](vps-qualification.md). Partial evidence does not close the full external gate.
+
+14. For optional HTTP CONNECT/SOCKS5, test external HTTPS egress with correct credentials, denial without credentials and after revocation, and denial of loopback/private/link-local destinations. SOCKS5 UDP is intentionally disabled. Verify the app uses proxy-side DNS when needed.
+15. For MTProto, import the assigned padded-secret link into native Telegram on each target device and verify message/media loading on the intended network. An anonymous `req_pq_multi`/`resPQ` nonce roundtrip tests Telegram transport, not account sign-in, app UX, calls or regional availability. Feature 006 SC-602 stays open until that native-device evidence is recorded.
+16. Follow [recovery](recovery.en.md), including account/assignment inventory and post-restore revocations. A successful empty-directory extraction alone does not complete the full recovery drill.

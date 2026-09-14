@@ -1,4 +1,4 @@
-# All six protocols
+# Six VPN protocols and optional proxies
 
 New installations enable WireGuard, VLESS, IKEv2, L2TP/IPsec, Outline and AmneziaWG. Ubuntu 22.04/24.04/26.04 x86_64 is the baseline for the complete bundle. The pinned official Outline image is x86_64; select a subset without Outline on other architectures and validate that platform separately.
 
@@ -12,6 +12,8 @@ sudo bash install.sh --existing
 ```
 
 `services` creates a backup before changing the selection. Supply a comma-separated subset instead of `all` to select protocols. An existing `.env` is not silently changed by the installer. Old v2 files without the new port keys use the defaults below. Keys and clients persist under `data/` and are included in backups. Enabling services does not import old host IPsec accounts or third-party Docker volumes.
+
+`all` also enables optional `mtproto` and `proxy`. MTProto uses TCP 8443 (`MTPROTO_PORT`) and secret Telegram links, with a 16-profile upstream limit. `proxy` provides authenticated HTTP CONNECT on TCP 3128 (`HTTP_PROXY_PORT`) and SOCKS5 on TCP 1080 (`SOCKS_PROXY_PORT`), TCP only. Each issued profile has its own random password. Private destinations are blocked; the proxy's own transport is unencrypted, so use a VPN on untrusted networks. Empty inventories never enable anonymous access. Both support the same CLI add/export/revoke commands, dashboard assignment and backup lifecycle.
 
 | Protocol | Public ports | Client |
 | --- | --- | --- |

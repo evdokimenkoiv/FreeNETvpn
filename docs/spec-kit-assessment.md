@@ -1,3 +1,5 @@
+> Историческая оценка интеграции 004 на 2026-09-11. Новая функция 005 добавлена 2026-09-14: [многопользовательская проверка](multiuser-validation.md). Актуальный объём выводит `tools/spec_audit.py`.
+
 # Оценка интеграции Spec Kit
 
 Дата: 2026-09-11. Объект: PR #1, ветка `codex/freenetvpn-reliability`. Используется официальный [Spec Kit 1.0.6](https://github.com/github/spec-kit/releases/tag/v1.0.6). Это внутренняя инженерная шкала, не сертификация GitHub и не оценка готовности VPS к эксплуатации.
@@ -26,3 +28,6 @@
 Текущие проверки ветки видны в [PR #1](https://github.com/evdokimenkoiv/FreeNETvpn/pull/1/checks). Исторические успешные проверки прежней реализации сохранены в `implementation-history.md`; они не выдаются за проверки нового коммита.
 
 На отдельном VPS Ubuntu 26.04 выполнено развёртывание всех шести протоколов; публичный HTTPS и часть внешнего VPN-трафика проверены. Фактические результаты и ограничения приведены в [отчёте VPS](vps-qualification.md). Три внешние задачи остаются открытыми до полного набора проверок реальными клиентами и восстановления с запуском на чистой установке. PR не слит в main.
+# Extension status — 2026-09-14
+
+Features 005 and 006 extend the audited structure to six specifications and 84 requirement/acceptance references. Account and proxy/recovery changes have their own tests and evidence. Historical scores below are internal assessments of their dated scope, not an official certification; native VPN/Telegram and complete replacement-server restore gates remain separate.

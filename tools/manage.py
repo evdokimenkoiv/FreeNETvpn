@@ -21,8 +21,8 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import urlencode
 
 ROOT = Path(__file__).resolve().parents[1]
-SUPPORTED = {"wireguard", "vless", "ikev2", "l2tp", "outline", "amnezia"}
-PORT_DEFAULTS = {"AWG_PORT": "51830", "OUTLINE_PORT": "2443", "OUTLINE_API_PORT": "19090"}
+SUPPORTED = {"wireguard", "vless", "ikev2", "l2tp", "outline", "amnezia", "mtproto", "proxy"}
+PORT_DEFAULTS = {"AWG_PORT": "51830", "OUTLINE_PORT": "2443", "OUTLINE_API_PORT": "19090", "MTPROTO_PORT": "8443", "HTTP_PROXY_PORT": "3128", "SOCKS_PROXY_PORT": "1080"}
 KEYS = {"CONFIG_VERSION", "DOMAIN", "WG_DOMAIN", "LE_EMAIL", "ADMIN_USER", "ADMIN_PASSWORD_HASH",
         "WG_PORT", "DNS1", "DNS2", "COMPOSE_PROFILES", "VLESS_UUID", "VLESS_WS_PATH", *PORT_DEFAULTS}
 
@@ -70,7 +70,7 @@ def validate(config):
     for key in PORT_DEFAULTS:
         if not config[key].isdigit() or not 1024 <= int(config[key]) <= 65535:
             raise ValueError(f"{key} must be between 1024 and 65535")
-    if len({int(config[k]) for k in ("WG_PORT", *PORT_DEFAULTS)}) != 4:
+    if len({int(config[k]) for k in ("WG_PORT", *PORT_DEFAULTS)}) != len(PORT_DEFAULTS) + 1:
         raise ValueError("VPN and management ports must be distinct")
     for key in ("DNS1", "DNS2"):
         ipaddress.IPv4Address(config[key])
@@ -312,7 +312,7 @@ def main():
     service_parser.add_argument("selection", help="Comma-separated protocols, or all")
     client = subs.add_parser("client")
     client.add_argument("action", choices=["add", "list", "export", "revoke", "preset"])
-    client.add_argument("protocol", choices=["ikev2", "l2tp", "outline", "amnezia", "vless"])
+    client.add_argument("protocol", choices=["ikev2", "l2tp", "outline", "amnezia", "vless", "mtproto", "proxy"])
     client.add_argument("name", nargs="?")
     client.add_argument("--preset")
     args = parser.parse_args()

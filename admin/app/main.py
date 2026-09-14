@@ -73,18 +73,47 @@ def authenticated(request: Request, credentials: HTTPBasicCredentials | None = D
     challenge = {} if request.url.path.startswith("/admin/api/") else {"WWW-Authenticate": 'Basic realm="FreeNETvpn"'}
     session = app.state.sessions.get(request.cookies.get("freenet_session", ""))
     if session and session["expires"] > time.time():
-        request.state.auth_mode = "session"
-        request.state.session = session
-        return config
+        user = account(session.get("username", config["username"]))
+        if user and user["enabled"] and user["revision"] == session.get("revision", "owner"):
+            request.state.auth_mode = "session"
+            request.state.session = session
+            return {**config, **user}
     if credentials is None:
         raise HTTPException(401, "Войдите в кабинет", headers=challenge)
     # Evaluate both checks, including for a wrong username.
-    username_ok = hmac.compare_digest(credentials.username.encode(), config["username"].encode())
-    password_ok = verify_password(credentials.password, config["password_hash"])
-    if not (username_ok and password_ok):
+    user = authenticate_account(credentials.username, credentials.password)
+    if not user:
         raise HTTPException(401, "Invalid credentials", headers=challenge)
     request.state.auth_mode = "basic"
+    return {**config, **user}
+
+
+def account(username):
+    config = app.state.config
+    if username == config["username"]:
+        return dict(username=username, display_name=username, role="admin", enabled=True,
+                    locale="ru", grants=[], revision="owner", is_owner=True)
+    return control("accounts", {"action": "get", "values": {"username": username}})
+
+
+def authenticate_account(username, password):
+    config = app.state.config
+    if hmac.compare_digest(username.encode(), config["username"].encode()):
+        return account(username) if verify_password(password, config["password_hash"]) else None
+    try:
+        return control("accounts", {"action": "authenticate", "values": {"username": username, "password": password}})
+    except HTTPException as error:
+        if error.status_code == 503:
+            return None  # unavailable account storage must never grant access
+        raise
+
+
+def administrator(config=Depends(authenticated)):
+    if config["role"] != "admin":
+        raise HTTPException(403, "Administrator access required")
     return config
+
+
 
 
 def same_origin(request):
@@ -102,6 +131,12 @@ def mutation(request: Request, config=Depends(authenticated)):
     return config
 
 
+def admin_mutation(config=Depends(mutation)):
+    if config["role"] != "admin":
+        raise HTTPException(403, "Administrator access required")
+    return config
+
+
 class Login(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str = Field(min_length=1, max_length=64)
@@ -112,28 +147,32 @@ class Login(BaseModel):
 def login(body: Login, request: Request, response: Response):
     same_origin(request)
     now = time.time()
-    key = request.client.host if request.client else "local"
+    key = body.username.casefold()
+    if len(app.state.login_attempts) > 2048:
+        app.state.login_attempts = {k:v for k,v in app.state.login_attempts.items() if v and now-v[-1] < 60}
+        if len(app.state.login_attempts) > 2048:
+            raise HTTPException(429, "Try again later")
     attempts = [t for t in app.state.login_attempts.get(key, []) if now-t < 60]
     app.state.login_attempts[key] = attempts
     if len(attempts) >= 12:
         raise HTTPException(429, "Слишком много попыток. Повторите через минуту")
     attempts.append(now)
     config = app.state.config
-    correct = hmac.compare_digest(body.username.encode(), config["username"].encode())
-    if not verify_password(body.password, config["password_hash"]) or not correct:
+    user = authenticate_account(body.username, body.password)
+    if not user:
         raise HTTPException(401, "Неверный логин или пароль")
     app.state.sessions = {k:v for k,v in app.state.sessions.items() if v["expires"] > now}
-    if len(app.state.sessions) >= 100:
+    if len(app.state.sessions) >= 1000:
         raise HTTPException(429, "Слишком много активных сессий")
     token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
-    app.state.sessions[token] = {"csrf": csrf, "expires": now + 8*3600}
+    app.state.sessions[token] = {"csrf": csrf, "expires": now + 8*3600, "username": user["username"], "revision": user["revision"]}
     response.set_cookie("freenet_session", token, max_age=8*3600, secure=True, httponly=True, samesite="strict", path="/admin")
-    return {"username": config["username"], "csrf": csrf}
+    return {**public_user(user), "csrf": csrf}
 
 
 @app.get("/admin/api/session")
 def session(request: Request, config=Depends(authenticated)):
-    return {"username": config["username"], "csrf": getattr(request.state, "session", {}).get("csrf"), "domain": config["domain"]}
+    return {**public_user(config), "csrf": getattr(request.state, "session", {}).get("csrf"), "domain": config["domain"]}
 
 
 @app.post("/admin/api/logout")
@@ -164,26 +203,30 @@ def control(method, data=None):
 
 @app.get("/admin/api/overview")
 def overview(config=Depends(authenticated)):
-    return control("snapshot")
+    data = control("snapshot")
+    if config["role"] == "admin":
+        return data
+    clients = [c for c in data["clients"] if permitted(config, c)]
+    return {"domain": config["domain"], "clients": [{k:v for k,v in c.items() if k in {"protocol", "name", "preset", "address"}} for c in clients], "observed_at": data["observed_at"]}
 
 
 @app.post("/admin/api/jobs", status_code=202)
-def submit(body: dict, config=Depends(mutation)):
+def submit(body: dict, config=Depends(admin_mutation)):
     return control("submit", body)
 
 
 @app.get("/admin/api/export")
 def export(protocol: str, name: str, format: str = "default", config=Depends(authenticated)):
-    return control("export", {"protocol": protocol, "name": name, "format": format})
+    return allowed_export(config, protocol, name, format)
 
 
 @app.get("/admin/api/qr")
 def qr(protocol: str, name: str, config=Depends(authenticated)):
-    if protocol not in {"vless", "amnezia", "wireguard", "outline"}:
+    if protocol not in {"vless", "amnezia", "wireguard", "outline", "mtproto"}:
         raise HTTPException(400, "Для этого протокола используйте файл конфигурации")
     import qrcode
     import qrcode.image.svg
-    exported = control("export", {"protocol": protocol, "name": name})
+    exported = allowed_export(config, protocol, name)
     image = qrcode.make(base64.b64decode(exported["content"]).decode().strip(), image_factory=qrcode.image.svg.SvgPathImage, border=4)
     data = io.BytesIO()
     image.save(data)
@@ -196,7 +239,7 @@ def health():
 
 
 @app.get("/auth")
-def auth_check(config=Depends(authenticated)):
+def auth_check(config=Depends(administrator)):
     return {"authenticated": True}
 
 
@@ -213,7 +256,7 @@ def index(request: Request, credentials: HTTPBasicCredentials | None = Depends(s
 
 
 @app.get("/admin/status")
-def status(config=Depends(authenticated)):
+def status(config=Depends(administrator)):
     targets = {}
     for service, host, port in [("wireguard", "wg-easy", 51821), ("vless", "xray", 10000)]:
         if service not in config["services"]:
@@ -230,13 +273,13 @@ def status(config=Depends(authenticated)):
 
 
 @app.get("/admin/backups")
-def backups(config=Depends(authenticated)):
+def backups(config=Depends(administrator)):
     return {"backups": sorted(p.name for p in BACKUPS.glob("freenetvpn-*.tar.gz") if p.is_file() and not p.is_symlink()),
             "create": "sudo bash scripts/backup.sh"}
 
 
 @app.get("/admin/backup")
-def latest_backup(config=Depends(authenticated)):
+def latest_backup(config=Depends(administrator)):
     candidates = sorted(p for p in BACKUPS.glob("freenetvpn-*.tar.gz") if p.is_file() and not p.is_symlink())
     if not candidates:
         raise HTTPException(404, "No backups yet; run sudo bash scripts/backup.sh on the server")
@@ -245,7 +288,7 @@ def latest_backup(config=Depends(authenticated)):
 
 
 @app.get("/admin/backups/{filename}")
-def download_backup(filename: str, config=Depends(authenticated)):
+def download_backup(filename: str, config=Depends(administrator)):
     if not re.fullmatch(r"freenetvpn-[A-Za-z0-9_-]+\.tar\.gz", filename):
         raise HTTPException(404, "Backup not found")
     path = BACKUPS / filename
@@ -253,3 +296,48 @@ def download_backup(filename: str, config=Depends(authenticated)):
         raise HTTPException(404, "Backup not found")
     return FileResponse(path, filename=filename, media_type="application/gzip",
                         headers={"Cache-Control": "no-store"})
+
+
+def public_user(user):
+    return {k:user[k] for k in ("username", "display_name", "role", "locale", "is_owner")}
+
+
+def permitted(user, client):
+    return any(all(g.get(k) == client.get(k) for k in ("protocol", "name", "identity")) for g in user["grants"])
+
+
+def allowed_export(user, protocol, name, format="default"):
+    data = {"protocol": protocol, "name": name, "format": format}
+    if user["role"] == "admin":
+        return control("export", data)
+    if not any(g["protocol"] == protocol and g["name"] == name for g in user["grants"]):
+        raise HTTPException(403, "Profile access denied")
+    return control("account_export", {**data, "username": user["username"]})
+
+
+@app.get("/admin/api/users")
+def users(config=Depends(administrator)):
+    return control("accounts", {"action": "list", "values": {"actor": config["username"]}})
+
+
+@app.post("/admin/api/users")
+def save_user(body: dict, config=Depends(admin_mutation)):
+    if "actor" in body:
+        raise HTTPException(422, "Invalid account fields")
+    return control("accounts", {"action": "save", "values": {**body, "actor": config["username"]}})
+
+
+@app.delete("/admin/api/users/{username}")
+def delete_user(username: str, config=Depends(admin_mutation)):
+    return control("accounts", {"action": "delete", "values": {"actor": config["username"], "username": username}})
+
+
+class PasswordChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_password: str = Field(min_length=1, max_length=1024)
+    password: str = Field(min_length=16, max_length=1024)
+
+
+@app.post("/admin/api/password")
+def change_password(body: PasswordChange, config=Depends(mutation)):
+    return control("accounts", {"action": "password", "values": {**body.model_dump(), "actor": config["username"]}})

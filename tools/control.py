@@ -2,6 +2,7 @@
 import base64
 import contextlib
 import io
+import hashlib
 import json
 import os
 import queue
@@ -17,9 +18,10 @@ from datetime import datetime, timezone
 import manage
 import presets
 import protocols
+from accounts import Accounts
 from operation_lock import locked
 
-SERVICES = {"wireguard": "wg-easy", "vless": "xray", "ikev2": "ipsec", "l2tp": "ipsec", "outline": "outline", "amnezia": "amnezia"}
+SERVICES = {"wireguard": "wg-easy", "vless": "xray", "ikev2": "ipsec", "l2tp": "ipsec", "outline": "outline", "amnezia": "amnezia", "mtproto": "mtproto", "proxy": "proxy"}
 TITLES = {"client.add": "Создание клиента", "client.revoke": "Отзыв доступа", "client.preset": "Смена шаблона", "service.restart": "Перезапуск сервиса", "service.start": "Запуск сервиса", "service.stop": "Остановка сервиса", "backup.create": "Резервная копия", "wireguard.connect": "Подключение wg-easy"}
 
 
@@ -30,6 +32,7 @@ def timestamp():
 class Controller:
     def __init__(self, root, worker=True):
         self.root = root
+        self.accounts = Accounts(root)
         self.lock = threading.RLock()
         self.wg_lock = threading.RLock()
         self.queue = queue.Queue(maxsize=32)
@@ -137,6 +140,8 @@ class Controller:
     def _execute(self, request):
         self.validate_request(request)
         op, protocol, name = request["operation"], request.get("protocol"), request.get("name")
+        if op == "client.revoke":
+            self.accounts.forget_profile(protocol, name)
         if op == "backup.create":
             return {"filename": manage.make_backup(self.root).name}
         if op.startswith("service."):
@@ -179,9 +184,10 @@ class Controller:
             if protocol not in enabled:
                 continue
             for name, peer in entries.items():
-                clients.append(dict(name=name, protocol=protocol, preset=peer.get("preset", presets.get(protocol).get("id")), address=peer.get("address")))
+                identity = hashlib.sha256(str(peer.get("uuid") or peer.get("public") or peer.get("secret") or peer.get("password")).encode()).hexdigest()
+                clients.append(dict(name=name, protocol=protocol, identity=identity, preset=peer.get("preset", presets.get(protocol).get("id")), address=peer.get("address")))
         if "vless" in enabled:
-            clients.append(dict(name="legacy", protocol="vless", preset="ws-tls", protected=True, label="Основной профиль"))
+            clients.append(dict(name="legacy", protocol="vless", identity=hashlib.sha256(config["VLESS_UUID"].encode()).hexdigest(), preset="ws-tls", protected=True, label="Основной профиль"))
         messages = []
         for protocol in ("outline", "wireguard"):
             if protocol not in enabled:
@@ -192,7 +198,8 @@ class Controller:
                 else:
                     items = self.wg_api("list")
                 for item in items:
-                    clients.append(dict(name=item.get("name") or str(item["id"]), protocol=protocol, address=item.get("ipv4Address")))
+                    identity = hashlib.sha256(str(item.get("publicKey") or item.get("password") or item["id"]).encode()).hexdigest()
+                    clients.append(dict(name=item.get("name") or str(item["id"]), protocol=protocol, identity=identity, address=item.get("ipv4Address")))
             except Exception:
                 messages.append(dict(protocol=protocol, message="Подключите wg-easy для управления клиентами" if protocol == "wireguard" and not state.get("wireguard_credentials") else "Не удалось получить список клиентов; проверьте сервис"))
         backups = [{"name": p.name, "size": p.stat().st_size, "modified": p.stat().st_mtime} for p in (self.root / "backups").glob("freenetvpn-*.tar.gz") if p.is_file() and not p.is_symlink()]
