@@ -1,0 +1,13 @@
+.env
+runtime/
+data/
+backups/
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+dist/
+.spec-kit-venv/
+node_modules/
+*.egg-info/

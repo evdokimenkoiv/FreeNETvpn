@@ -1,0 +1,9 @@
+# Operations validation — 2026-09-15
+
+The implementation adds service-level observability and bounded maintenance; see [English semantics](operations.en.md) / [Русский](operations.ru.md). Feature 007 joins the existing six Spec Kit features. The structural audit resolves seven features and 91 requirement/acceptance references; official prerequisite/task-template helpers resolve all seven contexts.
+
+Automated tests cover interface selection, TCP direction/state, handshake age, IKE versus child-SA counting, resets/gaps, 24-hour bounded history, missing containers, preview expiry/replay/capacity, cleanup failure, exact fixed cleanup commands, update failures, no package installation, member denial before backend dispatch and CSRF. Browser fixtures exercise the real RU/EN pages, seven groups, cleanup cancellation/confirmation and mobile width; screenshots use simulated data. English README images use English UI; Russian README retains Russian UI.
+
+A pre-deployment read-only probe on the authorized VPS returned measured RX/TX and active data for all seven service groups. The combined IPsec row exposed separate IKEv2/L2TP counts. Journal/Docker usage, APT simulation and GitHub revision lookup returned results. A fresh off-server backup was downloaded and SHA-256 verified before deployment. These are server measurements, not native-client acceptance or billable per-user traffic validation.
+
+CI and deployment evidence are attached to the published commit/workflow runs and private handover report. This document does not treat pending CI, a parser test or a TCP socket as native VPN acceptance. Host-wide destructive cleanup is covered by command-boundary tests and a real UI preview; production logs are not deleted merely to obtain test evidence. Existing [external acceptance gates](acceptance.md) remain separate.

@@ -1,104 +1,118 @@
 #!/usr/bin/env bash
-set -euo pipefail
-[[ $EUID -ne 0 ]] && { echo "Run as root / Запустите с sudo"; exit 1; }
-
-PS3="Select language / Выберите язык: "
-select opt in "English" "Русский"; do case $REPLY in 1) LANG=EN; break;; 2) LANG=RU; break;; esac; done
-
-msg(){ if [[ "$LANG" == "RU" ]]; then case "$1" in
-  ask_domain) echo -n "Введите FQDN (напр., vpn.example.com): ";;
-  ask_email) echo -n "E-mail для Let's Encrypt (prod): ";;
-  ask_admin) echo -n "Логин администратора веб-панели: ";;
-  ask_pass)  echo -n "Пароль администратора веб-панели: ";;
-  ask_services) echo "Сервисы (по умолчанию: все). Через пробел: [ipsec l2tp wireguard outline vless amnezia all]";;
-  ipv6_yes) echo "Обнаружен IPv6. Включить IPv6? [Y/n] ";;
-  ipv6_no)  echo "IPv6 не найден. Включить IPv6? [y/N] ";;
-  wg_ask) echo "Порт WireGuard: 1) 51820  2) свой  3) случайный";;
-  ssh_hard) echo "Усилить SSH (смена порта, запрет паролей, fail2ban, UFW)? [Y/n] ";;
-  ssh_2fa)  echo "Включить 2FA для SSH (Google Authenticator)? [y/N] ";;
-  done) echo "Готово! Откройте https://$DOMAIN/ (панель).";;
-esac; else case "$1" in
-  ask_domain) echo -n "Enter FQDN (e.g., vpn.example.com): ";;
-  ask_email) echo -n "E-mail for Let's Encrypt (prod): ";;
-  ask_admin) echo -n "Admin login for web panel: ";;
-  ask_pass)  echo -n "Admin password for web panel: ";;
-  ask_services) echo "Services (default: all). Space-separated: [ipsec l2tp wireguard outline vless amnezia all]";;
-  ipv6_yes) echo "IPv6 detected. Enable IPv6? [Y/n] ";;
-  ipv6_no)  echo "No IPv6. Enable IPv6 anyway? [y/N] ";;
-  wg_ask) echo "WireGuard port: 1) 51820  2) custom  3) random";;
-  ssh_hard) echo "Harden SSH (change port, disable password, fail2ban, UFW)? [Y/n] ";;
-  ssh_2fa)  echo "Enable SSH 2FA (Google Authenticator)? [y/N] ";;
-  done) echo "Done! Open https://$DOMAIN/ (panel).";;
-esac; fi }
-
-read -rp "$(msg ask_domain)" DOMAIN
-read -rp "$(msg ask_email)"  LE_EMAIL
-read -rp "$(msg ask_admin)"  ADMIN_USER
-read -rsp "$(msg ask_pass)"  ADMIN_PASS; echo
-read -rp "$(msg ask_services) " SERVICES
-[[ -z "${SERVICES:-}" || "${SERVICES}" == "all" ]] && SERVICES="ipsec l2tp wireguard outline vless amnezia"
-
-apt-get update -y
-apt-get install -y ca-certificates curl gnupg lsb-release jq ufw fail2ban whiptail unzip sed grep iproute2 libpam-google-authenticator || true
-
-bash scripts/check_public_ip.sh "$DOMAIN" || echo "Warning: public IP / DNS mismatch."
-
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
-apt-get update -y
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-if [[ "$SERVICES" == *"ipsec"* ]]; then apt-get install -y strongswan strongswan-pki; fi
-if [[ "$SERVICES" == *"l2tp"* ]]; then apt-get install -y xl2tpd ppp; fi
-
-cp .env.example .env
-sed -i "s|^DOMAIN=.*|DOMAIN=${DOMAIN}|" .env
-sed -i "s|^LE_EMAIL=.*|LE_EMAIL=${LE_EMAIL}|" .env
-sed -i "s|^ADMIN_USER=.*|ADMIN_USER=${ADMIN_USER}|" .env
-sed -i "s|^ADMIN_PASS=.*|ADMIN_PASS=${ADMIN_PASS}|" .env
-sed -i "s|^SERVICES=.*|SERVICES=${SERVICES}|" .env
-
-if ip -6 addr show scope global | grep -q inet6; then read -rp "$(msg ipv6_yes)" yn; [[ -z "$yn" || "$yn" =~ ^[Yy]$ ]] && ENABLE_IPV6=true || ENABLE_IPV6=false
-else read -rp "$(msg ipv6_no)" yn; [[ "$yn" =~ ^[Yy]$ ]] && ENABLE_IPV6=true || ENABLE_IPV6=false
+set -Eeuo pipefail
+umask 077
+if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
+  printf 'FreeNETvpn installer\nUsage: sudo bash install.sh [--existing] [--no-firewall]\nUbuntu 22.04/24.04/26.04 LTS x86_64, systemd, public IPv4 and two DNS names required.\nDownloaded entry: INSTALL_DIR=/opt/freenetvpn, FREENET_REF=main (override both with environment variables).\nAn existing installation is reused; update its code separately before --existing.\n'
+  exit 0
 fi
-sed -i "s|^ENABLE_IPV6=.*|ENABLE_IPV6=${ENABLE_IPV6}|" .env
-
-echo "$(msg wg_ask)"; read -r P
-WG_PORT=51820
-if [[ "$P" == "2" ]]; then read -rp "Enter UDP port (1024-65535): " WG_PORT
-elif [[ "$P" == "3" ]]; then WG_PORT=$(shuf -i 20000-60000 -n 1)
+[[ ${EUID} -eq 0 ]] || { echo "Run with sudo bash install.sh"; exit 1; }
+# The downloaded entry point obtains a complete checkout before using project files.
+source_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+if [[ ! -f "${source_dir}/tools/manage.py" ]]; then
+  install_dir="${INSTALL_DIR:-/opt/freenetvpn}"
+  if [[ -f "${install_dir}/tools/manage.py" ]]; then
+    exec bash "${install_dir}/install.sh" "$@"
+  fi
+  if [[ -e "$install_dir" ]]; then
+    echo "Refusing to overwrite existing directory: $install_dir"; exit 1
+  fi
+  ref="${FREENET_REF:-main}"
+  [[ "$ref" =~ ^[a-zA-Z0-9._/-]+$ ]] || { echo "Invalid FREENET_REF"; exit 1; }
+  apt-get update
+  apt-get install -y ca-certificates curl
+  mkdir -p -- "$(dirname -- "$install_dir")"
+  stage="$(mktemp -d "${install_dir}.download.XXXXXX")"
+  archive="$(mktemp)"
+  # Both paths are created by this invocation; a failed fetch must remain retryable.
+  trap 'rm -f -- "$archive"; rm -rf -- "$stage"' EXIT
+  curl --fail --location --retry 3 --connect-timeout 15 \
+    "https://api.github.com/repos/evdokimenkoiv/FreeNETvpn/tarball/${ref}" -o "$archive"
+  tar --extract --gzip --file "$archive" --strip-components=1 --directory "$stage" --no-same-owner
+  [[ -f "$stage/tools/manage.py" && -f "$stage/install.sh" ]] || { echo 'Incomplete project archive'; exit 1; }
+  mv -T --no-clobber -- "$stage" "$install_dir"
+  [[ ! -e "$stage" ]] || { echo "Install directory appeared during download; refusing replacement"; exit 1; }
+  rm -f -- "$archive"
+  trap - EXIT
+  exec bash "${install_dir}/install.sh" "$@"
 fi
-sed -i "s|^WG_PORT=.*|WG_PORT=${WG_PORT}|" .env
-
-ufw --force enable || true
-bash scripts/ufw_open_ports.sh "$SERVICES" "$WG_PORT"
-read -rp "$(msg ssh_hard)" yn
-if [[ -z "$yn" || "$yn" =~ ^[Yy]$ ]]; then
-  NEWP=$(shuf -i 2201-2299 -n 1)
-  sed -i "s/^#\?Port .*/Port ${NEWP}/" /etc/ssh/sshd_config
-  sed -i "s/^#\?PasswordAuthentication .*/PasswordAuthentication no/" /etc/ssh/sshd_config
-  ufw allow ${NEWP}/tcp
-  systemctl restart ssh || systemctl restart sshd || true
-  echo "SSH hardened. New port: ${NEWP}"
+cd "$source_dir"
+# OS metadata is trusted system configuration; user .env is parsed as data in Python.
+# shellcheck disable=SC1091
+source /etc/os-release
+[[ "$ID" == ubuntu && ( "$VERSION_ID" == 22.04 || "$VERSION_ID" == 24.04 || "$VERSION_ID" == 26.04 ) ]] || {
+  echo "Supported systems: Ubuntu 22.04, 24.04 and 26.04 LTS"; exit 1;
+}
+existing=0
+firewall=1
+for argument in "$@"; do
+  case "$argument" in
+    --existing) existing=1 ;;
+    --no-firewall) firewall=0 ;;
+    *) echo "Usage: sudo bash install.sh [--existing] [--no-firewall]"; exit 1 ;;
+  esac
+done
+apt-get update
+apt-get install -y python3 ca-certificates curl gnupg ufw openssl
+if [[ $existing -eq 1 ]]; then
+  python3 tools/manage.py validate
+  python3 tools/manage.py render
+else
+  python3 tools/manage.py configure
 fi
-
-read -rp "$(msg ssh_2fa)" yn
-if [[ "$yn" =~ ^[Yy]$ ]]; then
-  cp /etc/pam.d/sshd /etc/pam.d/sshd.bak.$(date +%s)
-  echo "auth required pam_google_authenticator.so nullok" >> /etc/pam.d/sshd
-  sed -i "s/^#\?ChallengeResponseAuthentication .*/ChallengeResponseAuthentication yes/" /etc/ssh/sshd_config
-  systemctl restart ssh || systemctl restart sshd || true
-  echo "2FA enabled. Run 'google-authenticator' per user to enroll."
+if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+  printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu %s stable\n' \
+    "$(dpkg --print-architecture)" "$VERSION_CODENAME" >/etc/apt/sources.list.d/docker.list
+  apt-get update
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 fi
-
-systemctl enable fail2ban && systemctl restart fail2ban || true
-
-bash scripts/enable_services.sh "$SERVICES"
-docker compose up -d
-
-if [[ "$SERVICES" == *"ipsec"* ]]; then bash scripts/ipsec_init_pki.sh "$DOMAIN"; systemctl enable strongswan-starter && systemctl restart strongswan-starter; fi
-if [[ "$SERVICES" == *"l2tp"* ]]; then systemctl enable xl2tpd && systemctl restart xl2tpd; fi
-
-echo "Done! Open https://${DOMAIN}/"
-echo "Next: ./menu.sh"
+systemctl enable --now docker
+profiles="$(python3 tools/manage.py get COMPOSE_PROFILES)"
+vpn_modules=()
+if [[ ",$profiles," == *,outline,* && "$(uname -m)" != x86_64 ]]; then
+  echo "The pinned Outline image currently requires x86_64."; exit 1
+fi
+if [[ ",$profiles," == *,wireguard,* ]]; then
+  modprobe wireguard
+  vpn_modules+=(wireguard)
+fi
+if [[ ",$profiles," == *,ikev2,* || ",$profiles," == *,l2tp,* ]]; then
+  modprobe af_key
+  modprobe ppp_generic
+  modprobe ppp_async
+  vpn_modules+=(af_key ppp_generic ppp_async)
+  [[ -c /dev/ppp ]] || mknod /dev/ppp c 108 0
+  printf 'c /dev/ppp 0600 root root - 108:0\n' >/etc/tmpfiles.d/freenetvpn.conf
+fi
+if [[ ",$profiles," == *,amnezia,* ]]; then
+  modprobe tun
+  vpn_modules+=(tun)
+fi
+# Docker's device mappings must still exist after a host reboot.
+printf '%s\n' "${vpn_modules[@]}" >/etc/modules-load.d/freenetvpn.conf
+python3 tools/manage.py prepare-protocols
+python3 tools/manage.py compose config --quiet
+python3 tools/manage.py compose pull --ignore-buildable
+python3 tools/manage.py compose build --pull
+python3 tools/manage.py compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+if [[ ",$profiles," == *,vless,* ]]; then
+  python3 tools/manage.py compose run --rm --no-deps xray run -test -config /etc/xray/config.json
+fi
+if [[ $firewall -eq 1 ]]; then
+  bash scripts/ufw_open_ports.sh
+fi
+# Bind-mounted config files need container recreation after atomic file replacement.
+bash scripts/install_control.sh
+python3 tools/manage.py compose up -d --force-recreate --wait --wait-timeout 120
+bash scripts/health_check.sh
+domain="$(python3 tools/manage.py get DOMAIN)"
+wg_domain="$(python3 tools/manage.py get WG_DOMAIN)"
+echo "Panel ready: https://${domain}/admin"
+if [[ ",$profiles," == *,wireguard,* ]]; then
+  echo "Complete the WireGuard setup at https://${wg_domain}/ (endpoint: ${domain})."
+  echo "Set the WireGuard port to $(python3 tools/manage.py get WG_PORT) and DNS to the values in .env."
+fi
+echo "Verify a VPN client handshake and traffic before treating the server as operational."
+echo "Other protocol clients: sudo bash menu.sh, option 7; see docs/protocols.md."

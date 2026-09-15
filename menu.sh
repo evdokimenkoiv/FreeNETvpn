@@ -1,26 +1,27 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+cd "$root"
 while true; do
-  echo "=== FreeNETvpn Control Panel ==="
-  echo "1) Create WireGuard client"
-  echo "2) Create VLESS client"
-  echo "3) Rotate VLESS UUID & path"
-  echo "4) Add IKEv2 user"
-  echo "5) Generate IKEv2 .mobileconfig"
-  echo "6) Add L2TP user"
-  echo "7) Create backup"
-  echo "8) Diagnostics"
-  echo "9) Exit"
-  read -rp "Choice: " c
-  case "$c" in
+  printf '\nFreeNETvpn\n1) WireGuard clients / Клиенты\n2) VLESS profile / Профиль\n3) Backup / Резервная копия\n4) Health / Проверка\n5) Diagnostics / Журналы\n6) Exit / Выход\n7) IKEv2 / L2TP / Outline / AmneziaWG clients\n'
+  read -rp 'Choice / Выбор: ' choice
+  case "$choice" in
     1) bash scripts/gen_wg_client.sh ;;
     2) bash scripts/gen_vless_client.sh ;;
-    3) bash scripts/rotate_vless.sh ;;
-    4) bash scripts/ikev2_add_user.sh ;;
-    5) bash scripts/ikev2_mobileconfig.sh ;;
-    6) bash scripts/l2tp_add_user.sh ;;
-    7) mkdir -p backups && tar czf backups/freenetvpn-backup-$(date +%s).tar.gz services host ;;
-    8) bash scripts/health_check.sh ;;
-    9) exit 0 ;;
+    3) bash scripts/backup.sh ;;
+    4) bash scripts/health_check.sh ;;
+    5) bash scripts/diagnostics.sh ;;
+    6) exit 0 ;;
+    7)
+      read -rp 'Protocol (ikev2/l2tp/outline/amnezia): ' protocol
+      read -rp 'Action (add/list/export/revoke): ' action
+      if [[ "$action" == list ]]; then
+        python3 tools/manage.py client list "$protocol"
+      else
+        read -rp 'Client name: ' client_name
+        python3 tools/manage.py client "$action" "$protocol" "$client_name"
+      fi
+      ;;
+    *) echo "Choose 1-7" ;;
   esac
 done

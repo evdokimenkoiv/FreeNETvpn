@@ -1,0 +1,12 @@
+.git
+.env
+runtime
+data
+backups
+__pycache__
+*.pyc
+.venv
+.spec-kit-venv
+node_modules
+.agents
+.specify

@@ -1,0 +1,1518 @@
+{
+  "schema_version": 1,
+  "features": {
+    "001-reliable-core": [
+      {
+        "ref": "FR-008",
+        "tasks": [
+          "T001"
+        ],
+        "implementation": [
+          ".specify/memory/constitution.md",
+          "specs/001-reliable-core/spec.md"
+        ],
+        "verification": [
+          "docs/acceptance.md"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-001",
+        "tasks": [
+          "T002"
+        ],
+        "implementation": [
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_reconfigure_preserves_all_keys_and_clients",
+          "tests/test_regressions.py::test_invalid_configuration_is_rejected"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-002",
+        "tasks": [
+          "T002"
+        ],
+        "implementation": [
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_reconfigure_preserves_all_keys_and_clients",
+          "tests/test_regressions.py::test_invalid_configuration_is_rejected"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-002",
+        "tasks": [
+          "T002"
+        ],
+        "implementation": [
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_reconfigure_preserves_all_keys_and_clients",
+          "tests/test_regressions.py::test_invalid_configuration_is_rejected"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-003",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "admin/app/main.py",
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_administrative_routes_require_auth",
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-001",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "admin/app/main.py",
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_administrative_routes_require_auth",
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T003",
+          "T004"
+        ],
+        "implementation": [
+          "admin/app/main.py",
+          "tools/manage.py",
+          "install.sh",
+          "scripts/ufw_open_ports.sh"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_administrative_routes_require_auth",
+          "tests/integration.py",
+          "tests/bootstrap.sh",
+          "docs/vps-qualification.md"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-005",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "install.sh",
+          "scripts/ufw_open_ports.sh"
+        ],
+        "verification": [
+          "tests/bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-004",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "docker-compose.yml"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_rendered_protocol_contract",
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-003",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "docker-compose.yml"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_rendered_protocol_contract",
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "docker-compose.yml"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_rendered_protocol_contract",
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-006",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_backup_restore_roundtrip_preserves_credentials_and_state",
+          "tests/test_regressions.py::test_archive_traversal_and_links_rejected",
+          "tests/test_regressions.py::test_rotation_restores_original_configuration_on_validation_failure"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-004",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_backup_restore_roundtrip_preserves_credentials_and_state",
+          "tests/test_regressions.py::test_archive_traversal_and_links_rejected",
+          "tests/test_regressions.py::test_rotation_restores_original_configuration_on_validation_failure"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US3/AC1",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_regressions.py::test_backup_restore_roundtrip_preserves_credentials_and_state",
+          "tests/test_regressions.py::test_archive_traversal_and_links_rejected",
+          "tests/test_regressions.py::test_rotation_restores_original_configuration_on_validation_failure"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-007",
+        "tasks": [
+          "T007"
+        ],
+        "implementation": [
+          ".github/workflows/ci.yml"
+        ],
+        "verification": [
+          "tests/test_regressions.py",
+          "tests/bootstrap.sh",
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-005",
+        "tasks": [
+          "T008"
+        ],
+        "implementation": [
+          "docs/acceptance.md"
+        ],
+        "verification": [
+          "docs/acceptance.md",
+          "docs/vps-qualification.md"
+        ],
+        "status": "external"
+      }
+    ],
+    "002-all-protocols": [
+      {
+        "ref": "FR-205",
+        "tasks": [
+          "T001",
+          "T002",
+          "T005"
+        ],
+        "implementation": [
+          "specs/002-all-protocols/plan.md",
+          "specs/002-all-protocols/data-model.md",
+          "tools/protocols.py",
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_protocols.py",
+          "tests/test_protocols.py::test_protocol_secrets_survive_backup_restore",
+          "tests/test_protocols.py::test_old_v2_configuration_gets_port_defaults_without_file_changes"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-201",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "services/ipsec/start.sh",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/integration_extra.py",
+          "tests/test_protocols.py::test_no_plaintext_l2tp_or_public_outline_api"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-202",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "services/ipsec/start.sh",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/integration_extra.py",
+          "tests/test_protocols.py::test_no_plaintext_l2tp_or_public_outline_api"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-201",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "services/ipsec/start.sh",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/integration_extra.py",
+          "tests/test_protocols.py::test_no_plaintext_l2tp_or_public_outline_api"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "services/ipsec/start.sh",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/integration_extra.py",
+          "tests/test_protocols.py::test_no_plaintext_l2tp_or_public_outline_api"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC2",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "services/ipsec/start.sh",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/integration_extra.py",
+          "tests/test_protocols.py::test_no_plaintext_l2tp_or_public_outline_api"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-203",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/protocols.py",
+          "services/amnezia/Dockerfile",
+          "docker-compose.yml"
+        ],
+        "verification": [
+          "tests/integration_extra.py",
+          "tests/test_protocols.py::test_outline_failed_rename_removes_partial_key"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-204",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/protocols.py",
+          "services/amnezia/Dockerfile",
+          "docker-compose.yml"
+        ],
+        "verification": [
+          "tests/integration_extra.py",
+          "tests/test_protocols.py::test_outline_failed_rename_removes_partial_key"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-202",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/protocols.py",
+          "services/amnezia/Dockerfile",
+          "docker-compose.yml"
+        ],
+        "verification": [
+          "tests/integration_extra.py",
+          "tests/test_protocols.py::test_outline_failed_rename_removes_partial_key"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/protocols.py",
+          "services/amnezia/Dockerfile",
+          "docker-compose.yml"
+        ],
+        "verification": [
+          "tests/integration_extra.py",
+          "tests/test_protocols.py::test_outline_failed_rename_removes_partial_key"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-203",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "tools/protocols.py",
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_protocols.py::test_protocol_secrets_survive_backup_restore",
+          "tests/test_protocols.py::test_old_v2_configuration_gets_port_defaults_without_file_changes"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US3/AC1",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "tools/protocols.py",
+          "tools/manage.py"
+        ],
+        "verification": [
+          "tests/test_protocols.py::test_protocol_secrets_survive_backup_restore",
+          "tests/test_protocols.py::test_old_v2_configuration_gets_port_defaults_without_file_changes"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-206",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          ".github/workflows/ci.yml"
+        ],
+        "verification": [
+          "tests/integration_extra.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-204",
+        "tasks": [
+          "T007"
+        ],
+        "implementation": [
+          "docs/acceptance.md"
+        ],
+        "verification": [
+          "docs/acceptance.md"
+        ],
+        "status": "external"
+      }
+    ],
+    "003-dashboard-presets": [
+      {
+        "ref": "FR-301",
+        "tasks": [
+          "T001",
+          "T003"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          ".gitignore",
+          "admin/app/main.py",
+          "admin/app/static/app.css",
+          "tools/control.py"
+        ],
+        "verification": [
+          "tests/ui.cjs",
+          "tests/test_dashboard.py::test_session_csrf_logout_and_secret_exclusion",
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-302",
+        "tasks": [
+          "T001",
+          "T003"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          ".gitignore",
+          "admin/app/main.py",
+          "admin/app/static/app.css",
+          "tools/control.py"
+        ],
+        "verification": [
+          "tests/ui.cjs",
+          "tests/test_dashboard.py::test_session_csrf_logout_and_secret_exclusion",
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-303",
+        "tasks": [
+          "T002",
+          "T006"
+        ],
+        "implementation": [
+          "tools/control_agent.py",
+          "tools/control.py",
+          "tools/operation_lock.py",
+          "scripts/install_control.sh",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_dashboard.py::test_queue_idempotency_and_no_persisted_password",
+          "tests/test_dashboard.py::test_agent_rejects_unsupported_requests",
+          "tests/test_dashboard.py::test_wireguard_poll_and_job_serialize_native_sqlite_sessions",
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction",
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-304",
+        "tasks": [
+          "T002",
+          "T006",
+          "T007"
+        ],
+        "implementation": [
+          "tools/control_agent.py",
+          "tools/control.py",
+          "tools/operation_lock.py",
+          "scripts/install_control.sh",
+          "admin/app/static/app.js",
+          "tools/manage.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_dashboard.py::test_queue_idempotency_and_no_persisted_password",
+          "tests/test_dashboard.py::test_agent_rejects_unsupported_requests",
+          "tests/test_dashboard.py::test_wireguard_poll_and_job_serialize_native_sqlite_sessions",
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction",
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-307",
+        "tasks": [
+          "T003",
+          "T008"
+        ],
+        "implementation": [
+          "admin/app/main.py",
+          "admin/app/static/app.js",
+          "admin/app/static/app.css",
+          "tools/control.py",
+          "docs/dashboard.md",
+          "docs/acceptance.md"
+        ],
+        "verification": [
+          "tests/test_dashboard.py::test_session_csrf_logout_and_secret_exclusion",
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction",
+          "tests/ui.cjs",
+          "docs/acceptance.md"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-301",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "admin/app/main.py",
+          "admin/app/static/app.js",
+          "admin/app/static/app.css",
+          "tools/control.py"
+        ],
+        "verification": [
+          "tests/test_dashboard.py::test_session_csrf_logout_and_secret_exclusion",
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-302",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "admin/app/main.py",
+          "admin/app/static/app.js",
+          "admin/app/static/app.css",
+          "tools/control.py"
+        ],
+        "verification": [
+          "tests/test_dashboard.py::test_session_csrf_logout_and_secret_exclusion",
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "admin/app/main.py",
+          "admin/app/static/app.js",
+          "admin/app/static/app.css",
+          "tools/control.py"
+        ],
+        "verification": [
+          "tests/test_dashboard.py::test_session_csrf_logout_and_secret_exclusion",
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-305",
+        "tasks": [
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/control.py",
+          "tools/protocols.py",
+          "admin/app/static/app.js",
+          "tools/presets.py"
+        ],
+        "verification": [
+          "tests/integration.py",
+          "tests/integration_extra.py",
+          "tests/ui.cjs",
+          "tests/test_dashboard.py::test_vless_failed_validation_rolls_back",
+          "tests/test_dashboard.py::test_amnezia_templates_keep_identity_and_server_headers"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-303",
+        "tasks": [
+          "T004",
+          "T005",
+          "T006",
+          "T007"
+        ],
+        "implementation": [
+          "tools/control.py",
+          "tools/protocols.py",
+          "admin/app/static/app.js",
+          "tools/presets.py",
+          "tools/manage.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/integration.py",
+          "tests/integration_extra.py",
+          "tests/ui.cjs",
+          "tests/test_dashboard.py::test_vless_failed_validation_rolls_back",
+          "tests/test_dashboard.py::test_amnezia_templates_keep_identity_and_server_headers",
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/control.py",
+          "tools/protocols.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/integration.py",
+          "tests/integration_extra.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-306",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "tools/presets.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_dashboard.py::test_vless_failed_validation_rolls_back",
+          "tests/test_dashboard.py::test_amnezia_templates_keep_identity_and_server_headers",
+          "tests/integration.py",
+          "tests/integration_extra.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US3/AC1",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "tools/presets.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_dashboard.py::test_vless_failed_validation_rolls_back",
+          "tests/test_dashboard.py::test_amnezia_templates_keep_identity_and_server_headers",
+          "tests/integration.py",
+          "tests/integration_extra.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US4/AC1",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          "tools/control.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_dashboard.py::test_service_allowlist_and_snapshot_redaction",
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US5/AC1",
+        "tasks": [
+          "T007"
+        ],
+        "implementation": [
+          "tools/control.py",
+          "tools/manage.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/integration.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-304",
+        "tasks": [
+          "T009"
+        ],
+        "implementation": [
+          "docs/acceptance.md"
+        ],
+        "verification": [
+          "docs/acceptance.md"
+        ],
+        "status": "external"
+      }
+    ],
+    "004-spec-kit-integration": [
+      {
+        "ref": "FR-401",
+        "tasks": [
+          "T001",
+          "T004"
+        ],
+        "implementation": [
+          "requirements-speckit.txt",
+          ".specify/integration.json",
+          ".specify/integrations/codex.manifest.json",
+          ".github/workflows/ci.yml"
+        ],
+        "verification": [
+          "tools/spec_audit.py",
+          "tools/check_spec_contexts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-405",
+        "tasks": [
+          "T002",
+          "T008",
+          "T011"
+        ],
+        "implementation": [
+          "tests/test_spec_audit.py",
+          "tests/test_contracts.py",
+          "tools/spec_audit.py"
+        ],
+        "verification": [
+          "tests/test_spec_audit.py",
+          "tests/test_contracts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-406",
+        "tasks": [
+          "T002",
+          "T004",
+          "T009"
+        ],
+        "implementation": [
+          "tests/test_spec_audit.py",
+          "tests/test_contracts.py",
+          ".github/workflows/ci.yml"
+        ],
+        "verification": [
+          "tests/test_spec_audit.py",
+          "tests/test_contracts.py",
+          "tools/check_spec_contexts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-403",
+        "tasks": [
+          "T002",
+          "T006",
+          "T009",
+          "T011"
+        ],
+        "implementation": [
+          "tests/test_spec_audit.py",
+          "tests/test_contracts.py",
+          "specs/003-dashboard-presets/contracts/http.json",
+          "specs/003-dashboard-presets/contracts/README.md",
+          ".github/workflows/ci.yml"
+        ],
+        "verification": [
+          "tests/test_spec_audit.py",
+          "tests/test_contracts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-402",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "tools/spec_context.py",
+          "docs/spec-kit.md",
+          ".specify/.gitignore"
+        ],
+        "verification": [
+          "tests/test_spec_audit.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T003",
+          "T004"
+        ],
+        "implementation": [
+          "tools/spec_context.py",
+          "docs/spec-kit.md",
+          ".specify/.gitignore",
+          ".github/workflows/ci.yml"
+        ],
+        "verification": [
+          "tests/test_spec_audit.py",
+          "tools/check_spec_contexts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-401",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          ".github/workflows/ci.yml"
+        ],
+        "verification": [
+          "tools/check_spec_contexts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-403",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "specs/traceability.json",
+          "specs/001-reliable-core/spec.md",
+          "specs/002-all-protocols/spec.md",
+          "specs/003-dashboard-presets/spec.md",
+          "specs/004-spec-kit-integration/spec.md"
+        ],
+        "verification": [
+          "tools/spec_audit.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-402",
+        "tasks": [
+          "T005",
+          "T008"
+        ],
+        "implementation": [
+          "specs/traceability.json",
+          "specs/001-reliable-core/spec.md",
+          "specs/002-all-protocols/spec.md",
+          "specs/003-dashboard-presets/spec.md",
+          "specs/004-spec-kit-integration/spec.md",
+          "tools/spec_audit.py"
+        ],
+        "verification": [
+          "tools/spec_audit.py",
+          "tests/test_spec_audit.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T005",
+          "T006"
+        ],
+        "implementation": [
+          "specs/traceability.json",
+          "specs/001-reliable-core/spec.md",
+          "specs/002-all-protocols/spec.md",
+          "specs/003-dashboard-presets/spec.md",
+          "specs/004-spec-kit-integration/spec.md",
+          "specs/003-dashboard-presets/contracts/http.json",
+          "specs/003-dashboard-presets/contracts/README.md"
+        ],
+        "verification": [
+          "tools/spec_audit.py",
+          "tests/test_contracts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-404",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          "specs/003-dashboard-presets/contracts/http.json",
+          "specs/003-dashboard-presets/contracts/README.md"
+        ],
+        "verification": [
+          "tests/test_contracts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-407",
+        "tasks": [
+          "T007",
+          "T010",
+          "T012"
+        ],
+        "implementation": [
+          "specs/traceability.json",
+          "docs/acceptance.md",
+          "docs/spec-kit-assessment.md",
+          "docs/spec-kit-review.md"
+        ],
+        "verification": [
+          "tests/test_spec_audit.py",
+          "docs/spec-kit-review.md"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-404",
+        "tasks": [
+          "T007",
+          "T010",
+          "T012"
+        ],
+        "implementation": [
+          "specs/traceability.json",
+          "docs/acceptance.md",
+          "docs/spec-kit-assessment.md",
+          "docs/spec-kit-review.md"
+        ],
+        "verification": [
+          "tests/test_spec_audit.py",
+          "docs/spec-kit-review.md"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC2",
+        "tasks": [
+          "T007"
+        ],
+        "implementation": [
+          "specs/traceability.json",
+          "docs/acceptance.md"
+        ],
+        "verification": [
+          "tests/test_spec_audit.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US3/AC1",
+        "tasks": [
+          "T008",
+          "T009"
+        ],
+        "implementation": [
+          "tools/spec_audit.py",
+          ".github/workflows/ci.yml"
+        ],
+        "verification": [
+          "tests/test_spec_audit.py",
+          "tests/test_contracts.py"
+        ],
+        "status": "automated"
+      }
+    ],
+    "005-multiuser-workspace": [
+      {
+        "ref": "FR-501",
+        "tasks": [
+          "T001"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-504",
+        "tasks": [
+          "T002"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-502",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-508",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T003"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-503",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-501",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T004"
+        ],
+        "implementation": [
+          "tools/accounts.py",
+          "admin/app/main.py"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-505",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-506",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-502",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US3/AC1",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-507",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "docs/images/README.md"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US4/AC1",
+        "tasks": [
+          "T006"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "docs/images/README.md"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-503",
+        "tasks": [
+          "T007"
+        ],
+        "implementation": [
+          "admin/app/static/app.js",
+          "admin/app/static/guides.js"
+        ],
+        "verification": [
+          "tests/test_accounts.py"
+        ],
+        "status": "automated"
+      }
+    ],
+    "006-proxy-recovery": [
+      {
+        "ref": "FR-601",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-602",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-603",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-604",
+        "tasks": [
+          "T001",
+          "T004"
+        ],
+        "implementation": [
+          "docs/recovery.en.md"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-601",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-602",
+        "tasks": [
+          "T005"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "docs/acceptance.md"
+        ],
+        "status": "external"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003"
+        ],
+        "implementation": [
+          "tools/proxy_config.py",
+          "tools/protocols.py"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T001",
+          "T004"
+        ],
+        "implementation": [
+          "docs/recovery.en.md"
+        ],
+        "verification": [
+          "tests/test_proxies.py",
+          "tests/integration_proxy.py"
+        ],
+        "status": "automated"
+      }
+    ],
+    "007-operations": [
+      {
+        "ref": "FR-701",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-702",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-703",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-704",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-701",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      }
+    ]
+  }
+}

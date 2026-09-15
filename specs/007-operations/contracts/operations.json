@@ -1,0 +1,1 @@
+{"version":1,"admin_get":["/admin/api/telemetry","/admin/api/maintenance"],"admin_post":["/admin/api/maintenance/preview"],"jobs":["maintenance.cleanup","maintenance.updates"],"cleanup_actions":["journal","build-cache"],"preview_ttl_seconds":300,"sample_interval_seconds":30,"retention_hours":24,"metric_scope":"service bridge interfaces; not user billing"}

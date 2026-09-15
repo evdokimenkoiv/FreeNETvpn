@@ -1,0 +1,5 @@
+# Deployment and backup contract
+
+Public entry: the first bash block in README.md is the canonical clean Ubuntu 22.04/24.04/26.04 x86_64 installation command. It installs curl/CA prerequisites, downloads the selected branch's installer and exits nonzero on download failure. Inputs: FREENET_REF and INSTALL_DIR; --existing reuses existing code/configuration, not a source-code upgrade. --help is read-only. Bootstrap stages downloads and refuses an unrelated existing directory.
+
+tools/manage.py validates configuration without executing it, renders before launch and retains keys on ordinary configuration. Backup includes .env/runtime/data with services stopped, then resumes the previously running services even on failure. Restore requires an empty target and rejects links/traversal/unexpected paths. These CLI boundaries are exercised by tests/bootstrap.sh and tests/test_regressions.py; real HTTPS/WireGuard/VLESS by tests/integration.py. Administrative HTTP additions are specified in ../003-dashboard-presets/contracts/http.json (relative to specs/).

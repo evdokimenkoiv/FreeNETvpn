@@ -1,0 +1,3 @@
+# Quickstart
+
+Run `python -m pytest -q` and `python tools/spec_audit.py`. Run `node tests/ui.cjs` with the documented browser environment. Sign in as administrator, open Traffic and wait for two 30-second samples to see rates. Check shared IPsec and connection labels. Open Maintenance, check updates, preview cleanup and cancel. Confirm a disposable-cache cleanup in an isolated test installation; verify replay rejection and unchanged profiles/backups. A member receives 403 from telemetry and maintenance APIs. Read docs/operations.en.md or docs/operations.ru.md for metric semantics and recovery boundaries.

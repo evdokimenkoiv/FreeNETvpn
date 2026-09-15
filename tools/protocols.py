@@ -1,0 +1,353 @@
+"""Optional VPN services: persistent credentials, configuration and client lifecycle."""
+import base64
+import copy
+import json
+import os
+import plistlib
+import re
+import secrets
+import ssl
+import subprocess
+import uuid
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+import manage
+import presets
+
+EXTRA = {"ikev2", "l2tp", "outline", "amnezia", "mtproto", "proxy"}
+
+
+def command(*args, data=None):
+    return subprocess.run(list(args), input=data, capture_output=True, check=True).stdout
+
+
+def keypair():
+    private = command("openssl", "genpkey", "-algorithm", "X25519", "-outform", "DER")
+    public = command("openssl", "pkey", "-inform", "DER", "-pubout", "-outform", "DER", data=private)
+    return {"private": base64.b64encode(private[-32:]).decode(), "public": base64.b64encode(public[-32:]).decode()}
+
+
+def state_file(root):
+    return root / "data/protocols.json"
+
+
+def read_state(root):
+    state = json.loads(state_file(root).read_text()) if state_file(root).exists() else {"version": 1, "clients": {}}
+    for protocol in ("ikev2", "l2tp", "amnezia", "vless", "mtproto", "proxy"):
+        state["clients"].setdefault(protocol, {})
+    return state
+
+
+def save(state, root):
+    manage.atomic_write(state_file(root), json.dumps(state, indent=2) + "\n")
+
+
+def certificate(root, domain):
+    pki = root / "data/ipsec"
+    for folder in ("private", "certs", "cacerts", "aacerts", "ocspcerts", "acerts", "crls"):
+        (pki / folder).mkdir(parents=True, exist_ok=True)
+    ca, key = pki / "cacerts/ca.pem", pki / "private/ca.pem"
+    if not ca.exists():
+        if key.exists():
+            raise ValueError("Incomplete IPsec CA: restore the matching certificate; key was preserved")
+        command("openssl", "req", "-x509", "-newkey", "rsa:3072", "-nodes", "-days", "3650",
+                "-subj", "/CN=FreeNETvpn IPsec CA", "-addext", "basicConstraints=critical,CA:TRUE",
+                "-keyout", str(key), "-out", str(ca))
+        os.chmod(key, 0o600)
+    server = pki / "certs/server.pem"
+    if not server.exists():
+        csr = root / "runtime/server.csr"
+        extension = root / "runtime/server.ext"
+        manage.atomic_write(extension, f"subjectAltName=DNS:{domain}\nextendedKeyUsage=serverAuth\nkeyUsage=digitalSignature,keyEncipherment\n")
+        command("openssl", "req", "-new", "-newkey", "rsa:3072", "-nodes", "-subj", f"/CN={domain}",
+                "-keyout", str(pki / "private/server.pem"), "-out", str(csr))
+        command("openssl", "x509", "-req", "-in", str(csr), "-CA", str(ca), "-CAkey", str(key),
+                "-set_serial", str(secrets.randbits(128)), "-days", "825", "-extfile", str(extension), "-out", str(server))
+        os.chmod(pki / "private/server.pem", 0o600)
+        csr.unlink()
+        extension.unlink()
+    # A hostname change must never silently leave an invalid server identity.
+    command("openssl", "x509", "-in", str(server), "-noout", "-checkhost", domain)
+
+
+def prepare(config, root):
+    config = manage.validate(config)
+    enabled = set(config["COMPOSE_PROFILES"].split(","))
+    if not enabled & EXTRA:
+        return
+    state = read_state(root)
+    if enabled & {"ikev2", "l2tp"}:
+        state.setdefault("ipsec_psk", secrets.token_urlsafe(32))
+        certificate(root, config["DOMAIN"])
+    if "amnezia" in enabled and "awg" not in state:
+        state["awg"] = {**keypair(), "params": {"Jc": 4, "Jmin": 40, "Jmax": 70, "S1": 16, "S2": 24,
+            "S3": 16, "S4": 16, "H1": 10123456, "H2": 20123456, "H3": 30123456, "H4": 40123456}}
+    if "outline" in enabled:
+        state.setdefault("outline_prefix", secrets.token_urlsafe(32))
+        if state.get("outline_port", config["OUTLINE_PORT"]) != config["OUTLINE_PORT"]:
+            raise ValueError("Outline port change requires a deliberate key migration; existing keys were preserved")
+        state["outline_port"] = config["OUTLINE_PORT"]
+        path = root / "data/outline"
+        path.mkdir(parents=True, exist_ok=True)
+        if not (path / "api.crt").exists():
+            command("openssl", "req", "-x509", "-newkey", "rsa:3072", "-nodes", "-days", "3650",
+                    "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1",
+                    "-keyout", str(path / "api.key"), "-out", str(path / "api.crt"))
+            os.chmod(path / "api.key", 0o600)
+        server_config = path / "shadowbox_server_config.json"
+        current = json.loads(server_config.read_text()) if server_config.exists() else {}
+        current.update(hostname=config["DOMAIN"], portForNewAccessKeys=int(config["OUTLINE_PORT"]), metricsEnabled=False)
+        manage.atomic_write(server_config, json.dumps(current))
+    if "mtproto" in enabled:
+        state.setdefault("mtproto_empty_secret", secrets.token_hex(16))
+        (root / "data/mtproto").mkdir(parents=True, exist_ok=True)
+    if "proxy" in enabled:
+        state.setdefault("proxy_empty_password", secrets.token_urlsafe(48))
+    save(state, root)
+    render(config, root)
+
+
+def render(config, root):
+    enabled = set(config["COMPOSE_PROFILES"].split(","))
+    manage.atomic_write(root / "runtime/ipsec.env", "ENABLE_L2TP=" + str("l2tp" in enabled).lower() + "\n")
+    if not (root / "runtime/outline.env").exists():
+        manage.atomic_write(root / "runtime/outline.env", "SB_API_PREFIX=unconfigured\n")
+    if not state_file(root).exists():
+        return
+    state = read_state(root)
+    import proxy_config
+    proxy_config.render(config, state, root)
+    path = root / "runtime/ipsec"
+    if enabled & {"ikev2", "l2tp"} and "ipsec_psk" in state:
+        path.mkdir(parents=True, exist_ok=True)
+        common = "config setup\n  uniqueids=never\n\n"
+        if "ikev2" in enabled:
+            common += f"""conn ikev2
+  keyexchange=ikev2
+  auto=add
+  left=%any
+  leftid=@{config['DOMAIN']}
+  leftcert=server.pem
+  leftauth=pubkey
+  leftsendcert=always
+  leftsubnet=0.0.0.0/0
+  right=%any
+  rightauth=eap-mschapv2
+  rightsourceip=10.99.0.10-10.99.0.250
+  rightdns={config['DNS1']},{config['DNS2']}
+  eap_identity=%identity
+  fragmentation=yes
+  forceencaps=yes
+  dpdaction=clear
+  dpddelay=30s
+  rekey=no
+  ike=aes256-sha256-modp2048,aes128-sha256-modp2048!
+  esp=aes256-sha256,aes128-sha256!
+
+"""
+        if "l2tp" in enabled:
+            common += """conn l2tp
+  keyexchange=ikev1
+  auto=add
+  type=transport
+  authby=secret
+  left=%any
+  leftprotoport=17/1701
+  right=%any
+  rightprotoport=17/%any
+  forceencaps=yes
+  dpdaction=clear
+  dpddelay=30s
+  rekey=no
+  ike=aes256-sha256-modp2048,aes256-sha1-modp2048,aes128-sha1-modp1024!
+  esp=aes256-sha256,aes256-sha1,aes128-sha1!
+"""
+        manage.atomic_write(path / "ipsec.conf", common)
+        secret = ': RSA server.pem\n' + (f': PSK "{state["ipsec_psk"]}"\n' if "l2tp" in enabled else "")
+        secret += "".join(f'{name} : EAP "{value["password"]}"\n' for name, value in state["clients"]["ikev2"].items())
+        manage.atomic_write(path / "ipsec.secrets", secret)
+        manage.atomic_write(path / "chap-secrets", "".join(f'{name} l2tpd "{v["password"]}" *\n' for name,v in state["clients"]["l2tp"].items()))
+        manage.atomic_write(path / "xl2tpd.conf", "[global]\nport = 1701\nforce userspace = yes\naccess control = no\n[lns default]\nip range = 10.99.1.10-10.99.1.250\nlocal ip = 10.99.1.1\nrequire chap = yes\nrefuse pap = yes\nrequire authentication = yes\nname = l2tpd\npppoptfile = /etc/ppp/options.xl2tpd\nlength bit = yes\n")
+        manage.atomic_write(path / "options.xl2tpd", f"require-mschap-v2\nrefuse-pap\nrefuse-chap\nrefuse-mschap\nname l2tpd\nms-dns {config['DNS1']}\nms-dns {config['DNS2']}\nauth\nmtu 1280\nmru 1280\nlock\nnodefaultroute\nlcp-echo-failure 4\nlcp-echo-interval 30\n")
+    if "amnezia" in enabled and "awg" in state:
+        awg = state["awg"]
+        text = f'[Interface]\nPrivateKey = {awg["private"]}\nListenPort = {config["AWG_PORT"]}\n'
+        text += "".join(f"{key} = {value}\n" for key,value in awg["params"].items())
+        for peer in state["clients"]["amnezia"].values():
+            text += f'\n[Peer]\nPublicKey = {peer["public"]}\nAllowedIPs = {peer["address"]}/32\n'
+        manage.atomic_write(root / "runtime/amnezia/awg0.conf", text)
+    if "outline" in enabled and "outline_prefix" in state:
+        manage.atomic_write(root / "runtime/outline.env", f'SB_API_PREFIX={state["outline_prefix"]}\n')
+
+
+def outline_api(config, root, path, method="GET", body=None):
+    state = read_state(root)
+    context = ssl.create_default_context(cafile=str(root / "data/outline/api.crt"))
+    request = Request(f'https://127.0.0.1:{config["OUTLINE_API_PORT"]}/{state["outline_prefix"]}/{path}',
+                      method=method, data=None if body is None else json.dumps(body).encode(),
+                      headers={"Content-Type": "application/json"})
+    with urlopen(request, context=context, timeout=15) as response:
+        data = response.read()
+        return json.loads(data) if data else {}
+
+
+def check(config, root):
+    enabled = set(config["COMPOSE_PROFILES"].split(","))
+    if enabled & {"ikev2", "l2tp"}:
+        result = manage.compose(["exec", "-T", "ipsec", "ipsec", "statusall"], root, capture=True)
+        if "uptime:" not in result.stdout:
+            raise ValueError("IPsec daemon is not ready")
+    if "amnezia" in enabled:
+        manage.compose(["exec", "-T", "amnezia", "awg", "show", "awg0", "public-key"], root, capture=True)
+    if "outline" in enabled:
+        outline_api(config, root, "access-keys")
+    if "proxy" in enabled:
+        manage.compose(["exec", "-T", "proxy", "/usr/local/bin/xray", "run", "-test", "-config", "/etc/xray/config.json"], root, capture=True)
+    if "mtproto" in enabled:
+        manage.compose(["exec", "-T", "mtproto", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8888/stats', timeout=3).read()"], root, capture=True)
+    print("Enabled protocol daemons/API ready; verify traffic with an external client")
+
+
+def export_client(protocol, name, config, state, root):
+    folder = root / "data/exports" / protocol
+    folder.mkdir(parents=True, exist_ok=True)
+    os.chmod(folder, 0o700)
+    if protocol == "outline":
+        matches = [c for c in outline_api(config, root, "access-keys")["accessKeys"] if c.get("name") == name]
+        if len(matches) != 1:
+            raise ValueError("Outline client name missing or ambiguous")
+        path = folder / f"{name}.txt"
+        manage.atomic_write(path, matches[0]["accessUrl"] + "\n")
+    else:
+        peer = state["clients"][protocol][name]
+        if protocol == "mtproto":
+            from urllib.parse import urlencode
+            path = folder / f"{name}.txt"
+            manage.atomic_write(path, "tg://proxy?" + urlencode(dict(server=config["DOMAIN"], port=config["MTPROTO_PORT"], secret="dd" + peer["secret"])) + "\n")
+        elif protocol == "proxy":
+            path = folder / f"{name}.json"
+            manage.atomic_write(path, json.dumps(dict(server=config["DOMAIN"], username=name, password=peer["password"], http_port=int(config["HTTP_PROXY_PORT"]), socks5_port=int(config["SOCKS_PROXY_PORT"]), udp=False, transport_encrypted=False), indent=2) + "\n")
+        elif protocol == "amnezia":
+            awg = state["awg"]
+            profile = presets.get("amnezia", peer.get("preset"))
+            content = f'[Interface]\nPrivateKey = {peer["private"]}\nAddress = {peer["address"]}/32\nDNS = {config["DNS1"]}, {config["DNS2"]}\nMTU = {profile["mtu"]}\n'
+            content += "".join(f"{k} = {v}\n" for k,v in {**awg["params"], **profile["junk"]}.items())
+            content += f'\n[Peer]\nPublicKey = {awg["public"]}\nAllowedIPs = 0.0.0.0/0\nEndpoint = {config["DOMAIN"]}:{config["AWG_PORT"]}\nPersistentKeepalive = {profile["keepalive"]}\n'
+            path = folder / f"{name}.conf"
+            manage.atomic_write(path, content)
+        elif protocol == "vless":
+            path = folder / f"{name}.txt"
+            manage.atomic_write(path, presets.vless_uri(config, peer, name) + "\n")
+            manage.atomic_write(folder / f"{name}.json", json.dumps(presets.vless_json(config, peer), indent=2))
+        else:
+            values = dict(server=config["DOMAIN"], username=name, password=peer["password"], protocol=protocol)
+            if protocol == "l2tp":
+                values["ipsec_psk"] = state["ipsec_psk"]
+            else:
+                values["remote_id"] = config["DOMAIN"]
+                manage.atomic_write(folder / "ca.pem", (root / "data/ipsec/cacerts/ca.pem").read_text())
+                ca_uuid = str(uuid.uuid4())
+                def payload(kind, extra):
+                    return dict(PayloadType=kind, PayloadVersion=1, PayloadIdentifier=str(uuid.uuid4()), PayloadUUID=str(uuid.uuid4()), PayloadDisplayName="FreeNETvpn", **extra)
+                cert = ssl.PEM_cert_to_DER_cert((folder / "ca.pem").read_text())
+                ca_payload = payload("com.apple.security.root", {"PayloadContent": cert})
+                ca_payload["PayloadUUID"] = ca_uuid
+                vpn = payload("com.apple.vpn.managed", {"UserDefinedName": f"FreeNETvpn {name}", "VPNType": "IKEv2", "IKEv2": {
+                    "RemoteAddress": config["DOMAIN"], "RemoteIdentifier": config["DOMAIN"], "AuthenticationMethod": "None",
+                    "ExtendedAuthEnabled": 1, "AuthName": name, "AuthPassword": peer["password"]}})
+                profile = payload("Configuration", {"PayloadContent": [ca_payload, vpn]})
+                manage.atomic_write(folder / f"{name}.mobileconfig", plistlib.dumps(profile).decode())
+            path = folder / f"{name}.json"
+            manage.atomic_write(path, json.dumps(values, indent=2) + "\n")
+    return path
+
+
+def client(action, protocol, name, root, preset=None):
+    from operation_lock import locked
+    with locked(root):
+        return _client(action, protocol, name, root, preset)
+
+
+def _client(action, protocol, name, root, preset=None):
+    config = manage.read_config(root)
+    if protocol not in config["COMPOSE_PROFILES"].split(","):
+        raise ValueError(f"{protocol} is not enabled")
+    if action != "list" and (not name or not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", name)):
+        raise ValueError("Client name must have 1-32 letters, digits, underscores or hyphens")
+    state = read_state(root)
+    previous = copy.deepcopy(state)
+    profile = presets.get(protocol, preset)
+    if action == "preset" and (protocol not in presets.CATALOG or not preset):
+        raise ValueError("Choose a VLESS or AmneziaWG preset")
+    if protocol == "outline":
+        peers = outline_api(config, root, "access-keys")["accessKeys"]
+        selected = [p for p in peers if p.get("name") == name]
+        if action == "list":
+            print(json.dumps([{"name": p.get("name"), "id": p["id"]} for p in peers])); return
+        if action == "add":
+            if selected:
+                raise ValueError("Client already exists")
+            added = outline_api(config, root, "access-keys", "POST", {"name": name, "port": int(config["OUTLINE_PORT"])})
+            # Explicit rename also supports server releases that ignore POST's name.
+            try:
+                outline_api(config, root, f'access-keys/{added["id"]}/name', "PUT", {"name": name})
+            except Exception:
+                outline_api(config, root, f'access-keys/{added["id"]}', "DELETE")
+                raise
+        elif action == "revoke":
+            if len(selected) != 1:
+                raise ValueError("Client missing or ambiguous")
+            outline_api(config, root, f'access-keys/{selected[0]["id"]}', "DELETE")
+    else:
+        peers = state["clients"][protocol]
+        if action == "list":
+            print(json.dumps(sorted(peers))); return
+        if action == "add":
+            if name in peers:
+                raise ValueError("Client already exists; use export")
+            if protocol == "amnezia":
+                used = {v["address"] for v in peers.values()}
+                address = next((f"10.98.0.{i}" for i in range(2,251) if f"10.98.0.{i}" not in used), None)
+                if not address:
+                    raise ValueError("Client address pool exhausted")
+                peers[name] = {**keypair(), "address": address}
+            elif protocol == "mtproto":
+                if len(peers) >= 16:
+                    raise ValueError("MTProto supports at most 16 profiles per server")
+                peers[name] = {"secret": secrets.token_hex(16)}
+            elif protocol == "vless":
+                peers[name] = {"uuid": str(uuid.uuid4())}
+            else:
+                peers[name] = {"password": secrets.token_urlsafe(24)}
+            if profile:
+                peers[name]["preset"] = profile["id"]
+        elif name not in peers:
+            raise ValueError("Client does not exist")
+        elif action == "revoke":
+            del peers[name]
+        elif action == "preset":
+            peers[name]["preset"] = profile["id"]
+        if action in {"add", "revoke", "preset"}:
+            save(state, root)
+            manage.render(config, root)
+            # Recreate closes existing sessions after revocation and refreshes bind mounts.
+            service = {"amnezia": "amnezia", "vless": "xray", "mtproto": "mtproto", "proxy": "proxy"}.get(protocol, "ipsec")
+            if protocol in {"vless", "proxy", "mtproto"}:
+                try:
+                    if protocol != "mtproto":
+                        manage.compose(["run", "--rm", "--no-deps", service, "run", "-test", "-config", "/etc/xray/config.json"], root)
+                    manage.compose(["up", "-d", "--force-recreate", "--wait", service], root)
+                except Exception:
+                    save(previous, root)
+                    manage.render(config, root)
+                    manage.compose(["up", "-d", "--force-recreate", "--wait", service], root)
+                    raise
+            elif not (action == "preset" and protocol == "amnezia"):
+                manage.compose(["up", "-d", "--force-recreate", "--wait", service], root)
+    if action == "revoke":
+        for path in (root / "data/exports" / protocol).glob(f"{name}.*"):
+            path.unlink()
+        print("Client revoked")
+    else:
+        print(export_client(protocol, name, config, state, root))

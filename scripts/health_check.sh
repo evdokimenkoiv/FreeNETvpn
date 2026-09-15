@@ -1,33 +1,35 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
-QUIET=0; [[ "${1:-}" == "-q" ]] && QUIET=1
-say(){ [[ $QUIET -eq 1 ]] || echo -e "$@"; }
-
-if [[ -f .env ]]; then set -o allexport; source .env; set +o allexport; fi
-host="${DOMAIN:-localhost}"
-
-say "== System =="; uname -a || true
-command -v docker >/dev/null || { echo "ERROR: docker not found"; exit 1; }
-systemctl is-active docker >/dev/null || { echo "ERROR: docker not active"; exit 1; }
-say "Docker OK"
-
-say "\n== Containers =="; docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
-need=("caddy" "admin" "xray")
-for c in wg-easy outline; do docker ps --format '{{.Names}}' | grep -q "^$c$" && need+=("$c"); done
-for n in "${need[@]}"; do docker ps --format '{{.Names}} {{.Status}}' | grep -E "^${n}\b" >/dev/null || { echo "ERROR: container ${n} not running"; exit 2; }; done
-say "Containers OK"
-
-say "\n== TLS / Caddy =="
-curl -fsSIk "https://${host}/" >/dev/null && say "HTTPS endpoint reachable" || { echo "ERROR: https://${host}/ unreachable"; exit 3; }
-echo | openssl s_client -servername "${host}" -connect "127.0.0.1:443" 2>/dev/null | openssl x509 -noout -subject -issuer -enddate || true
-
-say "\n== Routes =="; for path in / /admin /wg /outline; do code=$(curl -sk -o /dev/null -w "%{http_code}" -H "Host: ${host}" "https://127.0.0.1${path}"); say "GET ${path} -> ${code}"; done
-say "\n== Xray =="; docker exec "$(docker ps --format '{{.Names}}' | grep xray)" ss -ltpn | grep 10000 && say "Xray listening on 10000" || echo "WARN: xray port check failed"
-if docker ps --format '{{.Names}}' | grep -q wg-easy; then say "\n== WireGuard =="; docker exec "$(docker ps --format '{{.Names}}' | grep wg-easy)" wg show || echo "WARN: wg show failed"; fi
-
-say "\n== IPsec/L2TP =="; command -v ipsec >/dev/null && ipsec status || say "strongSwan not installed (OK if not selected)"
-systemctl list-unit-files | grep -q xl2tpd.service && systemctl -q is-active xl2tpd && say "xl2tpd active" || true
-
-say "\n== Firewall (UFW) =="; ufw status verbose || true
-say "\nAll checks completed."
+set -Eeuo pipefail
+# shellcheck source=scripts/common.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
+quiet=0
+[[ "${1:-}" != -q ]] || quiet=1
+manage validate
+expected="$(manage compose config --services)"
+running="$(manage compose ps --status running --services)"
+while IFS= read -r service; do
+  [[ -z "$service" ]] && continue
+  grep -Fxq "$service" <<<"$running" || { echo "ERROR: $service is not running"; exit 1; }
+done <<<"$expected"
+domain="$(manage get DOMAIN)"
+ready=0
+for ((attempt=1; attempt<=30; attempt++)); do
+  if curl -fsS --connect-timeout 5 --max-time 10 "https://${domain}/healthz" | grep -q '"status":"ok"'; then
+    ready=1; break
+  fi
+  sleep 2
+done
+[[ $ready -eq 1 ]] || { echo "ERROR: HTTPS health check failed (DNS/certificate/backend)"; exit 1; }
+status="$(curl -sS --connect-timeout 5 --max-time 10 -o /dev/null -w '%{http_code}' "https://${domain}/admin")"
+[[ "$status" == 401 ]] || { echo "ERROR: admin authentication check returned $status"; exit 1; }
+profiles="$(manage get COMPOSE_PROFILES)"
+if [[ ",$profiles," == *,wireguard,* ]]; then
+  wg_domain="$(manage get WG_DOMAIN)"
+  status="$(curl -sS --connect-timeout 5 --max-time 10 -o /dev/null -w '%{http_code}' "https://${wg_domain}/")"
+  [[ "$status" == 401 ]] || { echo "ERROR: WireGuard UI protection returned $status"; exit 1; }
+fi
+manage check-protocols
+if [[ $quiet -eq 0 ]]; then
+  manage compose ps
+  echo "Services, TLS and authentication checks passed. VPN client handshake still requires an external test."
+fi

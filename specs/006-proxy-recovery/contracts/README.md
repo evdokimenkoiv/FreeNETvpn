@@ -1,0 +1,2 @@
+# Contract extension
+Existing jobs/export/account APIs accept protocol IDs `mtproto` and `proxy`. MTProto default export is a secret-bearing `tg://proxy` text link; proxy export is JSON containing server, HTTP/SOCKS ports and account credentials. No new public API or arbitrary file/command access. MTProto supports at most 16 issued profiles. Restore remains root-only CLI with an empty destination.

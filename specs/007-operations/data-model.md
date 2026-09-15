@@ -1,0 +1,3 @@
+# Data model
+
+Telemetry sample: observed_at, rows keyed by service, protocol IDs, container generation, RX/TX bytes, rates or null, active counts and kind, availability. History: 2880 samples maximum, last 24 hours. No client addresses, identities or keys. Maintenance inspection: disk totals, journal bytes, Docker size summary, reboot flag, update result and checked_at. Cleanup plan: cryptographic token, action allowlist, expiry (five minutes), host-wide scope and estimate. Plans live only in memory, maximum 32; consumed once. Jobs use existing request IDs, status and result, including actual free-space delta. Update results distinguish unavailable from up-to-date and include installed/head SHA plus APT index age.

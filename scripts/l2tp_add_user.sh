@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-read -rp "L2TP username: " U
-read -rsp "Password: " P; echo
-echo "${U} * ${P} *" >> /etc/ppp/chap-secrets
-systemctl restart xl2tpd || true
-echo "User ${U} added."
+# shellcheck source=scripts/common.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
+manage client add l2tp "${1:?Usage: bash scripts/l2tp_add_user.sh NAME}"

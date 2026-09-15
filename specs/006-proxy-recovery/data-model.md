@@ -1,0 +1,2 @@
+# Data model
+`data/protocols.json` adds `clients.mtproto[name].secret` (16 random bytes as hex) and `clients.proxy[name].password` (random URL-safe string). Unexported fallback secrets preserve fail-closed empty configurations. Account assignments bind a hash of the profile secret, preventing name-reuse access. Runtime files are derived, private and backed up; Telegram upstream cache lives under `data/mtproto`.

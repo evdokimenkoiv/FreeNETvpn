@@ -1,0 +1,3 @@
+# Data model and invariants
+
+ProtocolState: version=1 JSON at data/protocols.json, clients grouped by ikev2/l2tp/amnezia/vless; WireGuard and Outline retain native stores. Client names contain 1–32 ASCII letters/digits/underscore/hyphen; duplicates fail rather than replace credentials. PKI, IPsec PSK and AWG server keys persist across preparation. AWG peer addresses occupy 10.98.0.2–10.98.0.250. Server-wide S/H obfuscation fields remain compatible with every client. Exports are secrets under data/, never static web assets. Client lifecycle: absent → created → exported (same identity) → revoked; failed Outline naming removes its partially created key. See tools/protocols.py and tests/test_protocols.py.

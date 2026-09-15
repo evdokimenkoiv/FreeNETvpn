@@ -1,0 +1,7 @@
+# HTTP and Unix contracts
+
+The complete evolving HTTP route inventory is specs/003-dashboard-presets/contracts/http.json. New routes: GET/POST /admin/api/users, DELETE /admin/api/users/{username} (administrators only), POST /admin/api/password (authenticated non-owner self-service with current password). All mutations require existing Origin/CSRF checks. Save accepts username, display_name, role, enabled, locale, grants[{protocol,name}], create boolean and optional password. The server supplies actor; client actor fields are rejected.
+
+Login/session responses add display_name, role, locale, is_owner. Members' overview returns exactly domain, clients and observed_at. Administrator snapshots retain the existing contract. Protected administrative routes return 403 to authenticated members; anonymous requests remain 401. Unassigned exports/QR return 403; identity changes discovered by the agent fail closed. Native wg-easy forward-auth accepts administrators only.
+
+Fixed agent methods extend snapshot/submit/export with accounts {action,values} and account_export {username,protocol,name,format}. The existing shared token and Unix permissions authenticate the web service; actor identity is derived from its authenticated session, never from a public request field. Account write methods independently require an enabled administrator. account_export rechecks enabled state and exact profile identity under the operation lock.
