@@ -1,5 +1,5 @@
 {
-  "contract_version": 2,
+  "contract_version": 3,
   "format": "FreeNETvpn consumer contract; not an OpenAPI document",
   "authentication": {
     "session": "freenet_session; Secure, HttpOnly, SameSite=strict, Path=/admin, expires after 8 hours; lost on web restart",
@@ -216,6 +216,27 @@
         422,
         503
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/api/telemetry",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "admin-only operations; mutations require CSRF"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/api/maintenance",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "admin-only operations; mutations require CSRF"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/maintenance/preview",
+      "anonymous_status": 401,
+      "success": 200,
+      "response": "admin-only operations; mutations require CSRF"
     }
   ],
   "operations": [
@@ -226,7 +247,9 @@
     "service.start",
     "service.stop",
     "backup.create",
-    "wireguard.connect"
+    "wireguard.connect",
+    "maintenance.cleanup",
+    "maintenance.updates"
   ],
   "job_request": {
     "required": [
@@ -238,7 +261,8 @@
       "name",
       "preset",
       "username",
-      "password"
+      "password",
+      "plan_id"
     ],
     "unknown_fields": "rejected",
     "request_id_pattern": "[a-f0-9-]{32,36}",
@@ -270,7 +294,10 @@
     "submit",
     "export",
     "accounts",
-    "account_export"
+    "account_export",
+    "telemetry",
+    "maintenance",
+    "maintenance_preview"
   ],
   "agent_request_max_bytes": 65536,
   "agent_timeout_seconds": 35,

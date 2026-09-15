@@ -1371,6 +1371,148 @@
         ],
         "status": "automated"
       }
+    ],
+    "007-operations": [
+      {
+        "ref": "FR-701",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-702",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-703",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-704",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-701",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/telemetry.py",
+          "tools/maintenance.py",
+          "admin/app/static/app.js"
+        ],
+        "verification": [
+          "tests/test_operations.py",
+          "tests/ui.cjs"
+        ],
+        "status": "automated"
+      }
     ]
   }
 }

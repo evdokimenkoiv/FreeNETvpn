@@ -21,10 +21,10 @@
 
 Нужен чистый сервер **Ubuntu 22.04/24.04/26.04 LTS x86_64** с systemd, root/sudo и публичным IPv4. Направьте на него две DNS A-записи, например vpn.example.com и wg.example.com. Откройте у провайдера TCP 80/443 и [порты выбранных VPN](docs/protocols.md); удалите неработающие AAAA-записи. UDP-точки не должны находиться за HTTP-прокси.
 
-Эта версия находится в [PR #1](https://github.com/evdokimenkoiv/FreeNETvpn/pull/1), ветка `codex/freenetvpn-reliability`; в main пока предыдущая версия.
+Актуальные исходники и установщик находятся в основной ветке `main`.
 
 ```bash
-sudo bash -c 'set -e; apt-get update -qq; apt-get install -y ca-certificates curl; export FREENET_REF=codex/freenetvpn-reliability; f=$(mktemp); trap "rm -f -- \"$f\"" EXIT; curl -fsSL "https://raw.githubusercontent.com/evdokimenkoiv/FreeNETvpn/${FREENET_REF}/install.sh" -o "$f"; bash "$f"'
+sudo bash -c 'set -e; apt-get update -qq; apt-get install -y ca-certificates curl; export FREENET_REF=main; f=$(mktemp); trap "rm -f -- \"$f\"" EXIT; curl -fsSL "https://raw.githubusercontent.com/evdokimenkoiv/FreeNETvpn/${FREENET_REF}/install.sh" -o "$f"; bash "$f"'
 ```
 
 Установщик получает весь проект в /opt/freenetvpn, спрашивает два домена, email для сертификатов и пароль администратора (16+ символов). Устанавливает Docker/Compose, проверяет и запускает выбранные протоколы, локальный агент, HTTPS и защиту входа. SSH и существующие ключи сохраняются. Мастер wg-easy завершается отдельно после установки.
@@ -45,6 +45,12 @@ sudo bash -c 'set -e; apt-get update -qq; apt-get install -y ca-certificates cur
 
 ## Обслуживание
 
+Раздел администратора **Трафик** показывает RX/TX сервисов, скорость, суммарную историю за 24 часа и активность по протоколам. **Обслуживание** показывает место, проверку обновлений проекта/ОС и предпросмотр очистки архивных журналов или старого кэша сборки. [Смысл показателей и границы очистки](docs/operations.ru.md).
+
+![Трафик и активность — демонстрационные данные](docs/images/freenet-traffic-ru.png)
+
+![Обслуживание — демонстрационные данные](docs/images/freenet-maintenance-ru.png)
+
 В /opt/freenetvpn команда `sudo bash scripts/health_check.sh` проверяет сервисы, HTTPS и вход. Копию создайте и скачайте в кабинете либо выполните `sudo bash scripts/backup.sh`. Архив включает .env, runtime, VPN-ключи и аккаунты. Сохраните его вне сервера приватно.
 
 Восстановление: скачайте чистый проект той же версии без .env/runtime/data, выполните `sudo bash restore.sh /путь/к/архиву.tar.gz`, проверьте DNS, затем `sudo bash install.sh --existing`. Восстановление поверх имеющихся данных запрещено. Для старого v1 предусмотрена отдельная [миграция](docs/migration.md).
@@ -57,7 +63,7 @@ sudo bash -c 'set -e; apt-get update -qq; apt-get install -y ca-certificates cur
 
 Установите зависимости `python -m pip install -r requirements-dev.txt`, запустите `python -m pytest -q`. CI также проверяет точную команду README, shell lint, реальный VPN-трафик на Ubuntu 22.04/24.04, браузер и контекст Spec Kit на Windows/Ubuntu. [Отчёт новой версии](docs/multiuser-validation.md) · [Проверки VPS](docs/vps-qualification.md) · [Оставшаяся внешняя приёмка](docs/acceptance.md).
 
-Закреплён официальный Spec Kit 1.0.6. Шесть спецификаций описывают ядро, протоколы, кабинет, интеграцию Spec Kit, многопользовательский режим и расширение прокси/восстановления. Проверки: `python tools/spec_audit.py` и `python tools/check_spec_contexts.py`. Внутренняя оценка SDD не является сертификацией GitHub или проверкой всех устройств/сетей. [Инструкция разработчика](docs/spec-kit.md).
+Закреплён официальный Spec Kit 1.0.6. Семь спецификаций описывают ядро, протоколы, кабинет, интеграцию Spec Kit, многопользовательский режим, прокси/восстановление и обслуживание сервера. Проверки: `python tools/spec_audit.py` и `python tools/check_spec_contexts.py`. Внутренняя оценка SDD не является сертификацией GitHub или проверкой всех устройств/сетей. [Инструкция разработчика](docs/spec-kit.md).
 
 ## Лицензия
 

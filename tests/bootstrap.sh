@@ -69,5 +69,5 @@ assert parts[:3] == ['sudo', 'bash', '-c'] and len(parts) == 4
 pathlib.Path(sys.argv[2]).write_text(parts[3])
 PY
 printf 'vpn.example.test\n' | INSTALL_DIR="$scratch/from-readme" CANONICAL_TEST=1 bash "$scratch/readme-command.sh"
-[[ "$(cat "$scratch/from-readme/selected-ref")" == codex/freenetvpn-reliability ]]
+[[ "$(cat "$scratch/from-readme/selected-ref")" == main ]]
 echo 'PASS: exact one-command README bootstrap preserves interactive stdin'

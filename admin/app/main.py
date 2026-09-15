@@ -215,6 +215,21 @@ def submit(body: dict, config=Depends(admin_mutation)):
     return control("submit", body)
 
 
+@app.get("/admin/api/telemetry")
+def telemetry(config=Depends(administrator)):
+    return control("telemetry")
+
+
+@app.get("/admin/api/maintenance")
+def maintenance(config=Depends(administrator)):
+    return control("maintenance")
+
+
+@app.post("/admin/api/maintenance/preview")
+def maintenance_preview(body: dict, config=Depends(admin_mutation)):
+    return control("maintenance_preview", body)
+
+
 @app.get("/admin/api/export")
 def export(protocol: str, name: str, format: str = "default", config=Depends(authenticated)):
     return allowed_export(config, protocol, name, format)

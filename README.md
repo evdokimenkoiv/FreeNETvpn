@@ -4,7 +4,7 @@
 
 A private VPN workspace for your people. Six protocols, one server, a bilingual dashboard and personal connection access.
 
-![Administrator workspace — demonstration data](docs/images/freenet-dashboard.png)
+![Administrator workspace — demonstration data](docs/images/freenet-dashboard-en.png)
 
 ## Your server. Your people.
 
@@ -15,16 +15,16 @@ A private VPN workspace for your people. Six protocols, one server, a bilingual 
 - **Guides for iOS, macOS, Windows, Android and routers**, with protocol-specific compatibility notes.
 - WireGuard, VLESS (WebSocket/TLS and gRPC/TLS), IKEv2, L2TP/IPsec, Outline and AmneziaWG. Three ready-made VLESS and three AmneziaWG presets.
 
-![People and permissions — demonstration data](docs/images/freenet-users.png)
+![People and permissions — demonstration data](docs/images/freenet-users-en.png)
 
 ## One-command deployment
 
 Requires a clean **Ubuntu 22.04/24.04/26.04 LTS x86_64** server with systemd, root/sudo and public IPv4. Point two DNS A records (e.g. vpn.example.com and wg.example.com) at it. Allow TCP 80/443 and the selected [VPN ports](docs/protocols.md) in the provider firewall. Remove unusable AAAA records. Do not put UDP endpoints behind an HTTP-only proxy.
 
-This version is on [PR #1](https://github.com/evdokimenkoiv/FreeNETvpn/pull/1), branch `codex/freenetvpn-reliability`; main still contains the previous version.
+The supported source and installer are on the `main` branch.
 
 ```bash
-sudo bash -c 'set -e; apt-get update -qq; apt-get install -y ca-certificates curl; export FREENET_REF=codex/freenetvpn-reliability; f=$(mktemp); trap "rm -f -- \"$f\"" EXIT; curl -fsSL "https://raw.githubusercontent.com/evdokimenkoiv/FreeNETvpn/${FREENET_REF}/install.sh" -o "$f"; bash "$f"'
+sudo bash -c 'set -e; apt-get update -qq; apt-get install -y ca-certificates curl; export FREENET_REF=main; f=$(mktemp); trap "rm -f -- \"$f\"" EXIT; curl -fsSL "https://raw.githubusercontent.com/evdokimenkoiv/FreeNETvpn/${FREENET_REF}/install.sh" -o "$f"; bash "$f"'
 ```
 
 The installer downloads the full project to /opt/freenetvpn and asks for both domains, certificate email and an administrator password (16+ characters). It installs Docker/Compose, renders and validates all selected services, starts the local control agent and verifies HTTPS/authentication. SSH settings and existing keys are preserved. The wg-easy setup wizard is completed separately after installation.
@@ -47,6 +47,12 @@ Screenshots show the real UI with **simulated data**, not a production server or
 
 ## Operations
 
+The admin-only **Traffic** page shows service RX/TX, rates, 24-hour aggregate history and protocol-specific connection activity. **Maintenance** shows disk usage, read-only project/OS update checks and previewed cleanup of archived journals or old dangling build cache. [Metric meanings and cleanup scope](docs/operations.en.md).
+
+![Traffic and activity — demonstration data](docs/images/freenet-traffic-en.png)
+
+![Server maintenance — demonstration data](docs/images/freenet-maintenance-en.png)
+
 From /opt/freenetvpn: `sudo bash scripts/health_check.sh` checks services/TLS/authentication. Create and download a backup in the portal, or run `sudo bash scripts/backup.sh`. Archives include .env, runtime, VPN keys and account state. Copy them off the server privately.
 
 To restore, obtain a fresh checkout of the same version, with no .env/runtime/data, run `sudo bash restore.sh /path/to/archive.tar.gz`, review DNS, then `sudo bash install.sh --existing`. Restore refuses to overwrite an existing installation. [Migration](docs/migration.md) covers legacy v1 data.
@@ -59,7 +65,7 @@ The web container stays non-root/read-only with no Docker socket. Fixed operatio
 
 Run `python -m pip install -r requirements-dev.txt`, then `python -m pytest -q`. CI also verifies the exact README bootstrap, shell lint, real VPN packet tests on Ubuntu 22.04/24.04, browser flows and official Spec Kit contexts on Ubuntu/Windows. [Multiuser validation](docs/multiuser-validation.md) · [VPS qualification](docs/vps-qualification.md) · [remaining external acceptance](docs/acceptance.md).
 
-Official Spec Kit 1.0.6 is pinned. Six feature directories cover the core, protocols, dashboard, Spec Kit integration, multiuser workspace and proxy/recovery extension. Run `python tools/spec_audit.py` and `python tools/check_spec_contexts.py`. The documented internal SDD score is not a GitHub certification or proof of every native client/network. [Developer workflow](docs/spec-kit.md).
+Official Spec Kit 1.0.6 is pinned. Seven feature directories cover the core, protocols, dashboard, Spec Kit integration, multiuser workspace, proxy/recovery and server operations. Run `python tools/spec_audit.py` and `python tools/check_spec_contexts.py`. The documented internal SDD score is not a GitHub certification or proof of every native client/network. [Developer workflow](docs/spec-kit.md).
 
 ## License
 

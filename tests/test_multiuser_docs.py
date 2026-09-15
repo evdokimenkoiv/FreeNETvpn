@@ -17,3 +17,11 @@ def test_bilingual_entrypoints_share_installer_and_valid_links():
         text=(ROOT/f'docs/devices.{locale}.md').read_text(encoding='utf-8')
         for device in ['iOS','macOS','Windows','Android','OpenWrt']:
             assert device in text
+
+
+def test_readme_screenshots_match_the_document_language():
+    en=(ROOT/'README.md').read_text(encoding='utf-8')
+    ru=(ROOT/'README.ru.md').read_text(encoding='utf-8')
+    assert all('-en.' in p for p in re.findall(r'!\[[^\]]*\]\(([^)]+)\)',en))
+    assert all('-en.' not in p for p in re.findall(r'!\[[^\]]*\]\(([^)]+)\)',ru))
+    assert 'FREENET_REF=main;' in en and 'FREENET_REF=main;' in ru

@@ -1,7 +1,13 @@
 name: freenetvpn
+x-logging: &bounded-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 services:
   caddy:
     image: caddy:2.11.4-alpine
+    logging: *bounded-logs
     restart: unless-stopped
     ports:
       - "80:80/tcp"
@@ -18,6 +24,7 @@ services:
 
   admin:
     build: ./admin
+    logging: *bounded-logs
     restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
@@ -32,6 +39,7 @@ services:
   wg-easy:
     image: ghcr.io/wg-easy/wg-easy:15.4.0
     profiles: [wireguard]
+    logging: *bounded-logs
     restart: unless-stopped
     # UI readiness must work before the operator completes the first-run wizard.
     # A WireGuard handshake is checked separately by integration/acceptance tests.
@@ -60,6 +68,7 @@ services:
   xray:
     image: ghcr.io/xtls/xray-core:26.3.27
     profiles: [vless]
+    logging: *bounded-logs
     restart: unless-stopped
     read_only: true
     security_opt: ["no-new-privileges:true"]
@@ -72,6 +81,7 @@ services:
   ipsec:
     build: ./services/ipsec
     profiles: [ikev2, l2tp]
+    logging: *bounded-logs
     restart: unless-stopped
     cap_add: [NET_ADMIN]
     devices: [/dev/ppp:/dev/ppp]
@@ -89,6 +99,7 @@ services:
   outline:
     image: quay.io/outline/shadowbox@sha256:545c6f7c7261bb30ae1dffe24a6fca5f8512f5d17c72cfb9e410e7e655444e62
     profiles: [outline]
+    logging: *bounded-logs
     restart: unless-stopped
     env_file: ./runtime/outline.env
     environment:
@@ -107,6 +118,7 @@ services:
   amnezia:
     build: ./services/amnezia
     profiles: [amnezia]
+    logging: *bounded-logs
     restart: unless-stopped
     cap_add: [NET_ADMIN]
     devices: [/dev/net/tun:/dev/net/tun]
@@ -119,6 +131,7 @@ services:
   proxy:
     image: ghcr.io/xtls/xray-core:26.3.27
     profiles: [proxy]
+    logging: *bounded-logs
     restart: unless-stopped
     read_only: true
     security_opt: ["no-new-privileges:true"]
@@ -131,6 +144,7 @@ services:
   mtproto:
     build: ./services/mtproto
     profiles: [mtproto]
+    logging: *bounded-logs
     restart: unless-stopped
     ulimits:
       nofile:

@@ -24,6 +24,12 @@ class Handler(socketserver.StreamRequestHandler):
             method = request.get("method")
             if method == "snapshot":
                 result = self.server.controller.snapshot()
+            elif method == "telemetry":
+                result = self.server.controller.telemetry.snapshot()
+            elif method == "maintenance":
+                result = self.server.controller.maintenance.inspect()
+            elif method == "maintenance_preview":
+                result = self.server.controller.maintenance.preview(request.get("data"))
             elif method == "accounts":
                 data = request.get("data", {})
                 if not isinstance(data, dict) or set(data) != {"action", "values"}:

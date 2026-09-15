@@ -48,6 +48,9 @@ const snapshot = {
     if(url.pathname.includes('/users/')&&req.method()==='DELETE'){people.splice(people.findIndex(u=>u.username===url.pathname.split('/').at(-1)),1);return json({ok:true});}
     if(url.pathname.endsWith('/logout')){logged=false;return json({ok:true});}
     if(url.pathname.endsWith('/overview'))return offline?json({detail:'Сервис управления недоступен'},503):json(who==='mira'?{domain:snapshot.domain,clients:snapshot.clients.slice(0,2),observed_at:snapshot.observed_at}:snapshot);
+    if(url.pathname.endsWith('/telemetry'))return json({sample:{observed_at:Date.now()/1000,rows:['wg-easy','xray','ipsec','outline','amnezia','mtproto','proxy'].map((id,i)=>({id,protocols:id==='ipsec'?['ikev2','l2tp']:[['wireguard','vless','ikev2','outline','amnezia','mtproto','proxy'][i]],rx_bytes:1048576*(i+1),tx_bytes:2097152*(i+1),rx_per_second:1024*(i+1),tx_per_second:2048*(i+1),active:id==='ipsec'?{ikev2:2,l2tp:1}:i,active_kind:['wg-easy','amnezia'].includes(id)?'handshake_180s':id==='ipsec'?'ike_sa':'tcp_inbound'}))},history:Array.from({length:60},(_,i)=>({observed_at:Date.now()/1000-(60-i)*30,rx_per_second:i===20?null:10000+Math.sin(i/3)*6000,tx_per_second:i===20?null:17000+Math.cos(i/5)*10000}))});
+    if(url.pathname.endsWith('/maintenance'))return json({observed_at:Date.now()/1000,disk:{free:32*1024**3,used:8*1024**3,total:40*1024**3},reboot_required:false,journal:'Archived and active journals take up 64M.',docker:'Build cache: 500 MB (shared with other projects)',updates:null});
+    if(url.pathname.endsWith('/maintenance/preview')){assert.equal(req.headers()['x-csrf-token'],'ui-csrf');return json({plan_id:'a'.repeat(64),action:req.postDataJSON().action,inspection:{disk:{free:32*1024**3},journal:'64M',docker:'500 MB'}});}
     if(url.pathname.endsWith('/export'))return json({filename:url.searchParams.get('name')+'.txt',content:Buffer.from('vless://test-fixture@vpn.example.test:443?security=tls').toString('base64'),media_type:'text/plain'});
     if(url.pathname.endsWith('/qr'))return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="white"/><path d="M10 10h30v30H10z M60 10h30v30H60z M10 60h30v30H10z M60 60h10v10H60z" fill="black"/></svg>'});
     if(url.pathname.endsWith('/jobs')){
@@ -71,10 +74,30 @@ const snapshot = {
     await page.locator('.service-card').first().waitFor();
     assert.equal(await page.locator('.service-card').count(),8);
     await page.screenshot({path:path.join(output,'freenet-dashboard.png'),fullPage:true});
+    await page.locator('#app .language-select').selectOption('en');await page.screenshot({path:path.join(output,'freenet-dashboard-en.png'),fullPage:true});await page.locator('#app .language-select').selectOption('ru');
+    await page.locator('nav [data-page=traffic]').click();
+    await page.locator('.traffic-card').first().waitFor();assert.equal(await page.locator('.traffic-card').count(),7);
+    await page.screenshot({path:path.join(output,'freenet-traffic-ru.png'),fullPage:false});
+    await page.locator('#app .language-select').selectOption('en');
+    assert.match(await page.locator('#page h1').innerText(),/Your network/);
+    await page.screenshot({path:path.join(output,'freenet-traffic-en.png'),fullPage:false});
+    await page.locator('nav [data-page=maintenance]').click();await page.locator('[data-action=cleanup]').first().waitFor();
+    await page.screenshot({path:path.join(output,'freenet-maintenance-en.png'),fullPage:true});
+    await page.locator('#app .language-select').selectOption('ru');await page.screenshot({path:path.join(output,'freenet-maintenance-ru.png'),fullPage:true});await page.locator('#app .language-select').selectOption('en');
+    const count=requests.length;
+    await page.locator('[data-action=cleanup][data-name=journal]').click();await page.locator('#confirm-operation').waitFor();
+    assert.match(await page.locator('#dialog-body').innerText(),/across this server/);
+    await page.locator('#close-dialog').click();assert.equal(requests.length,count);
+    await page.locator('[data-action=cleanup][data-name=build-cache]').click();await page.locator('#confirm-operation').click();
+    await page.locator('#dialog').waitFor({state:'hidden'});assert.equal(requests.at(-1).operation,'maintenance.cleanup');assert.equal(requests.at(-1).plan_id,'a'.repeat(64));
+    await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.locator('.toast').first().waitFor({state:'hidden'});await page.screenshot({path:path.join(output,'freenet-maintenance-mobile.png'),fullPage:true});
+    await page.setViewportSize({width:1440,height:1050});await page.locator('#app .language-select').selectOption('ru');
     await page.locator('nav [data-page=users]').click();
     await page.locator('.person-card').first().waitFor();
     await page.waitForFunction(()=>document.querySelector('nav [data-page=users]').getAttribute('aria-current')==='page');
     await page.screenshot({path:path.join(output,'freenet-users.png'),fullPage:true});
+    await page.locator('#app .language-select').selectOption('en');await page.screenshot({path:path.join(output,'freenet-users-en.png'),fullPage:true});await page.locator('#app .language-select').selectOption('ru');
     await page.locator('[data-action=new-user]').click();
     await page.locator('#user-form [name=display_name]').fill('Taylor Reed');
     await page.locator('#user-form [name=username]').fill('taylor');
@@ -142,7 +165,7 @@ const snapshot = {
     await page.locator('#login-form [name=password]').fill('Fixture-password-2026!');
     await page.locator('#login-form [type=submit]').click();
     await page.locator('.connection-card').first().waitFor();
-    assert.equal(await page.locator('nav [data-page=users]').count(),0);
+    assert.equal(await page.locator('nav [data-page=users]').count(),0);assert.equal(await page.locator('nav [data-page=traffic],nav [data-page=maintenance]').count(),0);
     assert.equal(await page.locator('[data-action=create]').count(),0);
     await page.locator('#app .language-select').selectOption('en');
     assert.equal(await page.locator('#connection-label').innerText(),'Connected');

@@ -44,7 +44,7 @@ sudo bash install.sh --existing
 sudo bash -c '
 set -e
 cd /opt/freenetvpn
-ref=codex/freenetvpn-reliability
+ref=main
 stage=$(mktemp -d)
 trap "rm -rf -- \"$stage\"" EXIT
 curl -fSL --retry 3 "https://api.github.com/repos/evdokimenkoiv/FreeNETvpn/tarball/$ref" -o "$stage/release.tar.gz"

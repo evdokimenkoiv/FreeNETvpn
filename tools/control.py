@@ -20,9 +20,12 @@ import presets
 import protocols
 from accounts import Accounts
 from operation_lock import locked
+from telemetry import Telemetry
+from maintenance import Maintenance
 
 SERVICES = {"wireguard": "wg-easy", "vless": "xray", "ikev2": "ipsec", "l2tp": "ipsec", "outline": "outline", "amnezia": "amnezia", "mtproto": "mtproto", "proxy": "proxy"}
 TITLES = {"client.add": "Создание клиента", "client.revoke": "Отзыв доступа", "client.preset": "Смена шаблона", "service.restart": "Перезапуск сервиса", "service.start": "Запуск сервиса", "service.stop": "Остановка сервиса", "backup.create": "Резервная копия", "wireguard.connect": "Подключение wg-easy"}
+TITLES.update({"maintenance.cleanup": "Очистка сервера", "maintenance.updates": "Проверка обновлений"})
 
 
 def timestamp():
@@ -33,6 +36,8 @@ class Controller:
     def __init__(self, root, worker=True):
         self.root = root
         self.accounts = Accounts(root)
+        self.telemetry = Telemetry(root)
+        self.maintenance = Maintenance(root)
         self.lock = threading.RLock()
         self.wg_lock = threading.RLock()
         self.queue = queue.Queue(maxsize=32)
@@ -43,19 +48,24 @@ class Controller:
                 job.update(status="interrupted", error="Сервис управления перезапущен. Проверьте результат перед повтором.")
         if worker:
             threading.Thread(target=self.work, daemon=True).start()
+            threading.Thread(target=self.telemetry.run, daemon=True).start()
 
     def persist(self):
         self.jobs = self.jobs[-100:]
         manage.atomic_write(self.path, json.dumps(self.jobs, ensure_ascii=False))
 
     def validate_request(self, request):
-        if not isinstance(request, dict) or set(request) - {"operation", "protocol", "name", "preset", "request_id", "username", "password"}:
+        if not isinstance(request, dict) or set(request) - {"operation", "protocol", "name", "preset", "request_id", "username", "password", "plan_id"}:
             raise ValueError("Недопустимые поля запроса")
         operation = request.get("operation")
         if operation not in TITLES:
             raise ValueError("Операция не разрешена")
         protocol = request.get("protocol")
-        if operation != "backup.create":
+        if operation.startswith("maintenance."):
+            allowed = {"operation", "request_id", "plan_id"} if operation == "maintenance.cleanup" else {"operation", "request_id"}
+            if set(request) - allowed or (operation == "maintenance.cleanup" and not re.fullmatch(r"[a-f0-9]{64}", str(request.get("plan_id", "")))):
+                raise ValueError("Invalid maintenance request")
+        if operation != "backup.create" and not operation.startswith("maintenance."):
             if protocol not in SERVICES or protocol not in manage.read_config(self.root)["COMPOSE_PROFILES"].split(","):
                 raise ValueError("Протокол не включён в установке")
         if operation.startswith("client."):
@@ -140,6 +150,10 @@ class Controller:
     def _execute(self, request):
         self.validate_request(request)
         op, protocol, name = request["operation"], request.get("protocol"), request.get("name")
+        if op == "maintenance.cleanup":
+            return self.maintenance.cleanup(request["plan_id"])
+        if op == "maintenance.updates":
+            return self.maintenance.updates()
         if op == "client.revoke":
             self.accounts.forget_profile(protocol, name)
         if op == "backup.create":
