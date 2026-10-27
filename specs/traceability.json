@@ -1513,6 +1513,133 @@
         ],
         "status": "automated"
       }
+    ],
+    "008-installer-diagnostics": [
+      {
+        "ref": "FR-801",
+        "tasks": [
+          "T001",
+          "T002"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "tools/diagnostics.py",
+          "install.sh",
+          "scripts/health_check.sh"
+        ],
+        "verification": [
+          "tests/test_installer_diagnostics.py",
+          "tests/installer_diagnostics.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-802",
+        "tasks": [
+          "T003",
+          "T004"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "tools/diagnostics.py",
+          "install.sh",
+          "scripts/health_check.sh"
+        ],
+        "verification": [
+          "tests/test_installer_diagnostics.py",
+          "tests/installer_diagnostics.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-803",
+        "tasks": [
+          "T003",
+          "T004"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "tools/diagnostics.py",
+          "install.sh",
+          "scripts/health_check.sh"
+        ],
+        "verification": [
+          "tests/test_installer_diagnostics.py",
+          "tests/installer_diagnostics.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-804",
+        "tasks": [
+          "T003",
+          "T004"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "tools/diagnostics.py",
+          "install.sh",
+          "scripts/health_check.sh"
+        ],
+        "verification": [
+          "tests/test_installer_diagnostics.py",
+          "tests/installer_diagnostics.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-801",
+        "tasks": [
+          "T003",
+          "T004"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "tools/diagnostics.py",
+          "install.sh",
+          "scripts/health_check.sh"
+        ],
+        "verification": [
+          "tests/test_installer_diagnostics.py",
+          "tests/installer_diagnostics.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T002"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "tools/diagnostics.py",
+          "install.sh",
+          "scripts/health_check.sh"
+        ],
+        "verification": [
+          "tests/test_installer_diagnostics.py",
+          "tests/installer_diagnostics.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T003",
+          "T004"
+        ],
+        "implementation": [
+          "tools/manage.py",
+          "tools/diagnostics.py",
+          "install.sh",
+          "scripts/health_check.sh"
+        ],
+        "verification": [
+          "tests/test_installer_diagnostics.py",
+          "tests/installer_diagnostics.sh"
+        ],
+        "status": "automated"
+      }
     ]
   }
 }

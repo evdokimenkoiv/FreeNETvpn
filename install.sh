@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 umask 077
+# Never print BASH_COMMAND: command arguments can contain credentials.
+bootstrap_failure() {
+  code=$?
+  trap - ERR
+  if [[ "${FREENET_LANG:-${LANG:-en}}" == ru* ]]; then
+    printf '\nERROR [INSTALL_DOWNLOAD]: загрузка проекта или зависимостей не завершена (код %s).\nПроверьте ошибку APT/curl/tar выше, доступ к GitHub, место на диске и FREENET_REF. После исправления повторите исходную команду установки. Существующие данные не удаляйте.\n' "$code" >&2
+  else
+    printf '\nERROR [INSTALL_DOWNLOAD]: project/dependency download did not complete (exit %s).\nCheck the APT/curl/tar error above, GitHub connectivity, free disk space and FREENET_REF. After fixing it, repeat the original installer command. Do not delete existing data.\n' "$code" >&2
+  fi
+  exit "$code"
+}
+trap bootstrap_failure ERR
 if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
   printf 'FreeNETvpn installer\nUsage: sudo bash install.sh [--existing] [--no-firewall]\nUbuntu 22.04/24.04/26.04 LTS x86_64, systemd, public IPv4 and two DNS names required.\nDownloaded entry: INSTALL_DIR=/opt/freenetvpn, FREENET_REF=main (override both with environment variables).\nAn existing installation is reused; update its code separately before --existing.\n'
   exit 0
@@ -36,6 +48,21 @@ if [[ ! -f "${source_dir}/tools/manage.py" ]]; then
   exec bash "${install_dir}/install.sh" "$@"
 fi
 cd "$source_dir"
+phase=packages
+firewall=1
+install_failure() {
+  code=$?
+  trap - ERR
+  diagnostic_flags=()
+  [[ $firewall -eq 1 ]] || diagnostic_flags+=(--no-firewall)
+  if command -v python3 >/dev/null; then
+    python3 tools/diagnostics.py stage --phase "$phase" "${diagnostic_flags[@]}" || true
+  else
+    printf '\nERROR [INSTALL_PACKAGES]: Python is unavailable. Fix the APT error above, then repeat sudo bash install.sh from this directory. Preserve .env/data.\n' >&2
+  fi
+  exit "$code"
+}
+trap install_failure ERR
 # OS metadata is trusted system configuration; user .env is parsed as data in Python.
 # shellcheck disable=SC1091
 source /etc/os-release
@@ -51,14 +78,25 @@ for argument in "$@"; do
     *) echo "Usage: sudo bash install.sh [--existing] [--no-firewall]"; exit 1 ;;
   esac
 done
+export FREENET_NO_FIREWALL=$((1-firewall))
 apt-get update
 apt-get install -y python3 ca-certificates curl gnupg ufw openssl
+phase=configuration
 if [[ $existing -eq 1 ]]; then
   python3 tools/manage.py validate
   python3 tools/manage.py render
 else
   python3 tools/manage.py configure
 fi
+diagnostic_flags=()
+[[ $firewall -eq 1 ]] || diagnostic_flags+=(--no-firewall)
+# Check DNS before image downloads or service changes. The saved settings remain retryable.
+if python3 tools/diagnostics.py dns "${diagnostic_flags[@]}"; then
+  :
+else
+  exit 1
+fi
+phase=docker
 if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
   install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
@@ -70,6 +108,7 @@ if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; t
 fi
 systemctl enable --now docker
 profiles="$(python3 tools/manage.py get COMPOSE_PROFILES)"
+phase=kernel
 vpn_modules=()
 if [[ ",$profiles," == *,outline,* && "$(uname -m)" != x86_64 ]]; then
   echo "The pinned Outline image currently requires x86_64."; exit 1
@@ -92,21 +131,27 @@ if [[ ",$profiles," == *,amnezia,* ]]; then
 fi
 # Docker's device mappings must still exist after a host reboot.
 printf '%s\n' "${vpn_modules[@]}" >/etc/modules-load.d/freenetvpn.conf
+phase=runtime
 python3 tools/manage.py prepare-protocols
 python3 tools/manage.py compose config --quiet
+phase=images
 python3 tools/manage.py compose pull --ignore-buildable
 python3 tools/manage.py compose build --pull
+phase=runtime
 python3 tools/manage.py compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 if [[ ",$profiles," == *,vless,* ]]; then
   python3 tools/manage.py compose run --rm --no-deps xray run -test -config /etc/xray/config.json
 fi
+phase=firewall
 if [[ $firewall -eq 1 ]]; then
   bash scripts/ufw_open_ports.sh
 fi
 # Bind-mounted config files need container recreation after atomic file replacement.
+phase=startup
 bash scripts/install_control.sh
 python3 tools/manage.py compose up -d --force-recreate --wait --wait-timeout 120
-bash scripts/health_check.sh
+phase=health
+bash scripts/health_check.sh "${diagnostic_flags[@]}"
 domain="$(python3 tools/manage.py get DOMAIN)"
 wg_domain="$(python3 tools/manage.py get WG_DOMAIN)"
 echo "Panel ready: https://${domain}/admin"

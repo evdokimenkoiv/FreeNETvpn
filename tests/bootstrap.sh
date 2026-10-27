@@ -20,7 +20,7 @@ CHILD
 tar -czf "$scratch/project.tar.gz" -C "$scratch/package" repository
 cat >"$scratch/bin/apt-get" <<'APT'
 #!/usr/bin/env bash
-exit 0
+exit "${MOCK_APT_EXIT:-0}"
 APT
 cat >"$scratch/bin/curl" <<'CURL'
 #!/usr/bin/env bash
@@ -40,9 +40,10 @@ chmod +x "$scratch/bin/apt-get" "$scratch/bin/curl"
 export PATH="$scratch/bin:$PATH" MOCK_ARCHIVE="$scratch/project.tar.gz" FREENET_REF=test-reviewed-ref
 export MOCK_ENTRY="$scratch/entry/install.sh"
 export INSTALL_DIR="$scratch/deployed"
-if MOCK_FAIL=1 bash "$scratch/entry/install.sh" --existing; then
+if MOCK_FAIL=1 bash "$scratch/entry/install.sh" --existing >"$scratch/failure" 2>&1; then
   echo 'Failed download incorrectly succeeded'; exit 1
 fi
+grep -Fq '[INSTALL_DOWNLOAD]' "$scratch/failure"
 [[ ! -e "$INSTALL_DIR" ]]
 [[ -z "$(find "$scratch" -maxdepth 1 -name 'deployed.download.*' -print)" ]]
 printf 'vpn.example.test\n' | bash "$scratch/entry/install.sh" --existing
@@ -71,3 +72,20 @@ PY
 printf 'vpn.example.test\n' | INSTALL_DIR="$scratch/from-readme" CANONICAL_TEST=1 bash "$scratch/readme-command.sh"
 [[ "$(cat "$scratch/from-readme/selected-ref")" == main ]]
 echo 'PASS: exact one-command README bootstrap preserves interactive stdin'
+
+# A real installer-stage failure must preserve exit status and saved-state guidance.
+mkdir -p "$scratch/stage/tools"
+cp "$root/install.sh" "$scratch/stage/"
+cp "$root/tools/diagnostics.py" "$scratch/stage/tools/"
+touch "$scratch/stage/tools/manage.py"
+printf 'SECRET_SENTINEL\n' >"$scratch/stage/.env"
+code=0
+MOCK_APT_EXIT=71 FREENET_LANG=en bash "$scratch/stage/install.sh" --existing --no-firewall >"$scratch/stage-result" 2>&1 || code=$?
+[[ $code -eq 71 ]]
+grep -Fq '[INSTALL_STAGE]: System packages' "$scratch/stage-result"
+grep -Fq 'sudo bash install.sh --existing --no-firewall' "$scratch/stage-result"
+[[ "$(cat "$scratch/stage/.env")" == SECRET_SENTINEL ]]
+if grep -Fq SECRET_SENTINEL "$scratch/stage-result"; then
+  echo 'Installer exposed saved state'; exit 1
+fi
+echo 'PASS: stage failure keeps original exit status, saved state and firewall mode'

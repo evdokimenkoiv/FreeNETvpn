@@ -1,0 +1,2 @@
+# Quickstart
+Run python -m pytest tests/test_installer_diagnostics.py -q, python tools/spec_audit.py and python tools/check_spec_contexts.py. On Linux run sudo bash tests/bootstrap.sh and bash tests/installer_diagnostics.sh. Manually enter the same hostname twice: only the second hostname should be requested again, before the password. Read docs/installation-errors.en.md or docs/installation-errors.ru.md. Diagnostics never require deleting .env or data.

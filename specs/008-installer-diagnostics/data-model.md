@@ -1,0 +1,2 @@
+# Model
+Diagnostic: stable code, summary, observed nonsecret values, fix instructions, verify command, resume command. Language: FREENET_LANG=ru|en or LANG, English fallback. State: configuration absent (repeat installer prompts) or present (validate then --existing). DNS observation: returned addresses, empty result or resolver-tool timeout/failure. HTTPS observation: curl exit and numeric HTTP status only. Installer phase is a fixed allowlist, not an arbitrary command.

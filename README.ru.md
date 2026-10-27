@@ -63,7 +63,7 @@ sudo bash -c 'set -e; apt-get update -qq; apt-get install -y ca-certificates cur
 
 Установите зависимости `python -m pip install -r requirements-dev.txt`, запустите `python -m pytest -q`. CI также проверяет точную команду README, shell lint, реальный VPN-трафик на Ubuntu 22.04/24.04, браузер и контекст Spec Kit на Windows/Ubuntu. [Отчёт новой версии](docs/multiuser-validation.md) · [Проверки VPS](docs/vps-qualification.md) · [Оставшаяся внешняя приёмка](docs/acceptance.md).
 
-Закреплён официальный Spec Kit 1.0.6. Семь спецификаций описывают ядро, протоколы, кабинет, интеграцию Spec Kit, многопользовательский режим, прокси/восстановление и обслуживание сервера. Проверки: `python tools/spec_audit.py` и `python tools/check_spec_contexts.py`. Внутренняя оценка SDD не является сертификацией GitHub или проверкой всех устройств/сетей. [Инструкция разработчика](docs/spec-kit.md).
+Закреплён официальный Spec Kit 1.0.6. Восемь спецификаций описывают ядро, протоколы, кабинет, интеграцию Spec Kit, многопользовательский режим, прокси/восстановление обслуживание сервера и диагностику установки. Проверки: `python tools/spec_audit.py` и `python tools/check_spec_contexts.py`. Внутренняя оценка SDD не является сертификацией GitHub или проверкой всех устройств/сетей. [Инструкция разработчика](docs/spec-kit.md).
 
 ## Лицензия
 
@@ -74,3 +74,5 @@ sudo bash -c 'set -e; apt-get update -qq; apt-get install -y ca-certificates cur
 MTProto для Telegram и HTTP CONNECT/SOCKS5 с авторизацией доступны как дополнительные сервисы. Включение: `sudo python3 tools/manage.py services all`, затем `sudo bash install.sh --existing`. Создавайте и назначайте профили в кабинете. MTProto поддерживает 16 профилей; HTTP/SOCKS работает только с TCP, собственный транспорт не шифрует. В недоверенной сети используйте его через VPN.
 
 [Восстановление резервной копии](docs/recovery.ru.md).
+
+[Ошибки установки: исправление и продолжение](docs/installation-errors.ru.md).

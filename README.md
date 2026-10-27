@@ -65,7 +65,7 @@ The web container stays non-root/read-only with no Docker socket. Fixed operatio
 
 Run `python -m pip install -r requirements-dev.txt`, then `python -m pytest -q`. CI also verifies the exact README bootstrap, shell lint, real VPN packet tests on Ubuntu 22.04/24.04, browser flows and official Spec Kit contexts on Ubuntu/Windows. [Multiuser validation](docs/multiuser-validation.md) · [VPS qualification](docs/vps-qualification.md) · [remaining external acceptance](docs/acceptance.md).
 
-Official Spec Kit 1.0.6 is pinned. Seven feature directories cover the core, protocols, dashboard, Spec Kit integration, multiuser workspace, proxy/recovery and server operations. Run `python tools/spec_audit.py` and `python tools/check_spec_contexts.py`. The documented internal SDD score is not a GitHub certification or proof of every native client/network. [Developer workflow](docs/spec-kit.md).
+Official Spec Kit 1.0.6 is pinned. Eight feature directories cover the core, protocols, dashboard, Spec Kit integration, multiuser workspace, proxy/recovery server operations and installer diagnostics. Run `python tools/spec_audit.py` and `python tools/check_spec_contexts.py`. The documented internal SDD score is not a GitHub certification or proof of every native client/network. [Developer workflow](docs/spec-kit.md).
 
 ## License
 
@@ -76,3 +76,5 @@ See [LICENSE](LICENSE).
 MTProto for Telegram and authenticated HTTP CONNECT/SOCKS5 are optional services. Enable with `sudo python3 tools/manage.py services all`, then `sudo bash install.sh --existing`. Create and assign profiles in the dashboard. MTProto supports 16 profiles; HTTP/SOCKS is TCP only and its own transport is unencrypted. Use it over VPN on untrusted networks.
 
 [Restore a backup](docs/recovery.en.md).
+
+[Installation errors: fix and resume](docs/installation-errors.en.md).

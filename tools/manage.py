@@ -16,6 +16,7 @@ import tarfile
 import tempfile
 import uuid
 import presets
+from diagnostics import validate_hostname, ConfigurationIssue, resume, tr
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlencode
@@ -50,12 +51,8 @@ def validate(config):
     missing = KEYS - config.keys()
     if missing:
         raise ValueError("Missing keys: " + ", ".join(sorted(missing)))
-    domain_re = r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}"
     for key in ("DOMAIN", "WG_DOMAIN"):
-        if not re.fullmatch(domain_re, config[key]):
-            raise ValueError(f"{key} must be a lowercase DNS name, without scheme/path")
-    if config["DOMAIN"] == config["WG_DOMAIN"]:
-        raise ValueError("WireGuard UI needs its own hostname (WG_DOMAIN)")
+        validate_hostname(config[key], key, config["DOMAIN"] if key == "WG_DOMAIN" else None)
     if not re.fullmatch(r"[A-Za-z0-9.!+_-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}", config["LE_EMAIL"]):
         raise ValueError("Invalid LE_EMAIL")
     if not re.fullmatch(r"[A-Za-z0-9_-]{5,64}", config["ADMIN_USER"]):
@@ -112,6 +109,19 @@ def password_hash(password):
     return f"pbkdf2_sha256:600000:{salt.hex()}:{digest}"
 
 
+def hostname_input(supplied, prompt, key, primary=None):
+    if supplied is not None:
+        return validate_hostname(supplied.strip().lower(), key, primary)
+    while True:
+        value = input(prompt).strip().lower()
+        try:
+            return validate_hostname(value, key, primary)
+        except ConfigurationIssue as error:
+            print(str(error), file=sys.stderr)
+            print(tr("Please enter this hostname again; no password has been requested or configuration saved.",
+                     "Введите это имя повторно; пароль ещё не запрашивался, настройки не сохранялись."), file=sys.stderr)
+
+
 def configure(args, root=ROOT):
     if (root / ".env").exists():
         config = read_config(root)
@@ -120,8 +130,10 @@ def configure(args, root=ROOT):
                 raise ValueError("Existing configuration differs; edit .env deliberately, then run render")
         print("Existing configuration and credentials preserved")
     else:
-        domain = args.domain or input("VPN domain (vpn.example.com): ").strip().lower()
-        wg_domain = args.wg_domain or input("WireGuard UI domain (wg.example.com): ").strip().lower()
+        print(tr("Use two different hostnames: VPN portal (e.g. vpn.example.com) and WireGuard UI (e.g. wg.example.com). Both A records may point to the same server IPv4.",
+                 "Нужны два разных имени: кабинет VPN (например vpn.example.com) и интерфейс WireGuard (например wg.example.com). Обе A-записи могут указывать на один IPv4 сервера."))
+        domain = hostname_input(args.domain, "VPN domain (vpn.example.com): ", "DOMAIN")
+        wg_domain = hostname_input(args.wg_domain, "WireGuard UI domain (wg.example.com): ", "WG_DOMAIN", domain)
         email = args.email or input("Certificate email: ").strip()
         password = sys.stdin.readline().rstrip("\r\n") if args.password_stdin else getpass.getpass("Admin password (16+ characters): ")
         config = dict(CONFIG_VERSION="2", DOMAIN=domain, WG_DOMAIN=wg_domain, LE_EMAIL=email,
@@ -352,8 +364,16 @@ def main():
                 print(client_uri(config))
             else:
                 print("Configuration OK")
+    except (EOFError, KeyboardInterrupt):
+        print(tr("\nSetup interrupted. Existing files were not reset.", "\nВвод прерван. Существующие файлы не сбрасывались."), file=sys.stderr)
+        resume(ROOT, os.environ.get("FREENET_NO_FIREWALL") == "1")
+        return 130
     except (ValueError, OSError, tarfile.TarError, subprocess.CalledProcessError) as error:
-        print(f"ERROR: {error}", file=sys.stderr)
+        # CalledProcessError includes argv, which can contain credentials.
+        message = f"Command failed (exit {error.returncode}); inspect the error above." if isinstance(error, subprocess.CalledProcessError) else str(error)
+        print(f"ERROR: {message}", file=sys.stderr)
+        if args.command in {"configure", "validate"}:
+            resume(ROOT, os.environ.get("FREENET_NO_FIREWALL") == "1")
         return 1
     return 0
 
