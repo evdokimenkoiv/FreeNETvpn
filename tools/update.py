@@ -22,6 +22,7 @@ REPO = "https://api.github.com/repos/evdokimenkoiv/FreeNETvpn"
 STATE = {".env", "data", "runtime"}
 PROTECTED = STATE | {"backups", ".updates", ".git", ".venv", "node_modules", "__pycache__"}
 MAX_CODE = 256 * 1024**2
+LOCK_FD = None
 
 
 def localize(en, ru):
@@ -124,7 +125,9 @@ def extract_code(archive, destination):
 
 
 def run(root, *args, capture=False, check=True):
-    return subprocess.run(args, cwd=root, text=True, capture_output=capture, check=check)
+    # The installer must keep the lock even if its parent updater is killed.
+    inherited = {"pass_fds": (LOCK_FD,)} if LOCK_FD is not None else {}
+    return subprocess.run(args, cwd=root, text=True, capture_output=capture, check=check, **inherited)
 
 
 def manage(root, *args, **kwargs):
@@ -365,6 +368,7 @@ def update(root, ref):
 
 
 def main():
+    global LOCK_FD
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("/opt/freenetvpn"))
     parser.add_argument("--ref", default="main")
@@ -390,6 +394,7 @@ def main():
         os.chmod(directory, 0o700)
         with (directory / "lock").open("w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            LOCK_FD = lock.fileno()
             if Path(__file__).resolve() != directory / "updater.py":
                 atomic_copy(Path(__file__).resolve(), directory / "updater.py")
             if args.rollback:
@@ -407,6 +412,8 @@ def main():
             extra = " --rollback " + shlex.quote(args.rollback) + " --restore-state" if args.rollback else ""
             print("  sudo python3 " + shlex.quote(str(directory / "updater.py")) + " --root " + shlex.quote(str(root)) + extra)
         return 1
+    finally:
+        LOCK_FD = None
     return 0
 
 

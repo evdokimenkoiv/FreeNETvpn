@@ -228,3 +228,12 @@ def test_backup_disk_failure_explains_cause_without_exposing_paths():
     import errno
     message = updater.failure_message(OSError(errno.ENOSPC, "No space left", "/private/SECRET"))
     assert "df -h" in message and "inodes" in message and "SECRET" not in message
+
+
+def test_installer_child_inherits_update_lock(tmp_path, monkeypatch):
+    fcntl = pytest.importorskip("fcntl")
+    with (tmp_path / "lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        monkeypatch.setattr(updater, "LOCK_FD", lock.fileno())
+        # fstat fails if close_fds discarded the descriptor in the child process.
+        updater.run(tmp_path, sys.executable, "-c", "import os,sys; os.fstat(int(sys.argv[1]))", str(lock.fileno()))
