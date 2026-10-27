@@ -1640,6 +1640,208 @@
         ],
         "status": "automated"
       }
+    ],
+    "009-safe-updates": [
+      {
+        "ref": "FR-901",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-902",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-903",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-904",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-905",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-906",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "FR-907",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "SC-901",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US1/AC1",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      },
+      {
+        "ref": "US2/AC1",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "implementation": [
+          "tools/update.py",
+          "update.sh",
+          "tools/diagnostics.py"
+        ],
+        "verification": [
+          "tests/test_update.py",
+          "tests/update_bootstrap.sh"
+        ],
+        "status": "automated"
+      }
     ]
   }
 }

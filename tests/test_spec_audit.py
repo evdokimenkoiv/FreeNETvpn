@@ -23,7 +23,7 @@ def checkout(tmp_path):
 def test_repository_artifacts_are_consistent():
     result = audit(ROOT)
     assert result["ok"], result["errors"]
-    assert result["features"] == 8
+    assert result["features"] == 9
     assert result["requirements"] > 50
 
 

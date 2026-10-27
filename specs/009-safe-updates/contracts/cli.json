@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "entry": "update.sh",
+  "root": "/opt/freenetvpn",
+  "default_ref": "main",
+  "protected": [
+    ".env",
+    "data",
+    "runtime",
+    "backups",
+    ".git"
+  ],
+  "rollback_requires": [
+    "--rollback ID",
+    "--restore-state"
+  ],
+  "state_restore_automatic": false
+}

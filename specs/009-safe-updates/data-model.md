@@ -1,0 +1,2 @@
+# Model
+Transaction: commit, candidate files, phase, backup_complete, prior running services/control-agent state and presence map of overwritten code. Private artifacts: candidate, state.tar.gz, old-code, updater.py and transaction.json. Global private state: pending.json, installed file/hash manifests and advisory lock. Published metadata: data/release.json commit and update timestamp. Rescue snapshots retain later user state during explicit rollback.

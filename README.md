@@ -59,13 +59,17 @@ To restore, obtain a fresh checkout of the same version, with no .env/runtime/da
 
 **Disabling/deleting a portal account does not revoke downloaded VPN keys.** Revoke its profiles in Connections to terminate VPN access. Assignment changes and password resets invalidate old portal sessions. Administrator accounts have access to all keys and backups; ordinary members cannot reach those administrative endpoints or native wg-easy.
 
+## One-command update
+
+Already installed: `sudo bash /opt/freenetvpn/update.sh`. For older releases without that file, use the [bootstrap command](docs/update.en.md). Settings, users and VPN keys are preserved; a private backup is created before applying changes. Service interruption is expected during the update.
+
 ## Verification and scope
 
 The web container stays non-root/read-only with no Docker socket. Fixed operations run through an authenticated local Unix/systemd agent. PBKDF2 password hashes and account state are private; no credentials belong in Git. Role enforcement applies to HTTP APIs, QR, downloads and Basic authentication, not only navigation visibility.
 
 Run `python -m pip install -r requirements-dev.txt`, then `python -m pytest -q`. CI also verifies the exact README bootstrap, shell lint, real VPN packet tests on Ubuntu 22.04/24.04, browser flows and official Spec Kit contexts on Ubuntu/Windows. [Multiuser validation](docs/multiuser-validation.md) · [VPS qualification](docs/vps-qualification.md) · [remaining external acceptance](docs/acceptance.md).
 
-Official Spec Kit 1.0.6 is pinned. Eight feature directories cover the core, protocols, dashboard, Spec Kit integration, multiuser workspace, proxy/recovery server operations and installer diagnostics. Run `python tools/spec_audit.py` and `python tools/check_spec_contexts.py`. The documented internal SDD score is not a GitHub certification or proof of every native client/network. [Developer workflow](docs/spec-kit.md).
+Official Spec Kit 1.0.6 is pinned. Nine feature directories cover the core, protocols, dashboard, Spec Kit integration, multiuser workspace, proxy/recovery, server operations, installer diagnostics and safe updates. Run `python tools/spec_audit.py` and `python tools/check_spec_contexts.py`. The documented internal SDD score is not a GitHub certification or proof of every native client/network. [Developer workflow](docs/spec-kit.md).
 
 ## License
 

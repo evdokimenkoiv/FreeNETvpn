@@ -66,3 +66,5 @@ sudo python3 tools/manage.py compose logs --tail 60 caddy admin
 Add `wg-easy` for the WireGuard UI. Do not publish full logs containing private data. The installer does not print failed command arguments or bypass TLS; review third-party APT/Docker/service output before sharing it.
 
 `--existing` **does not download new code**. Obtain updated diagnostics using the [deployment guide](deployment.md), preserving state. Rerunning the downloaded entry point also reuses the existing directory. Successful server checks do not replace client-device connection and traffic verification.
+
+[Image download/disk errors and one-command updates](update.en.md).

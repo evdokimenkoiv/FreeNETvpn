@@ -54,12 +54,14 @@ jobs:
         run: sudo bash tests/bootstrap.sh
       - name: Actionable installer and HTTPS failures
         run: bash tests/installer_diagnostics.sh
+      - name: One-command update bootstrap
+        run: sudo bash tests/update_bootstrap.sh
       - name: Shell syntax and lint
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y shellcheck
-          for file in install.sh menu.sh restore.sh scripts/*.sh services/*/*.sh tests/*.sh; do bash -n "$file"; done
-          shellcheck --severity=warning --external-sources --exclude=SC1091 install.sh menu.sh restore.sh scripts/*.sh services/*/*.sh tests/*.sh
+          for file in install.sh update.sh menu.sh restore.sh scripts/*.sh services/*/*.sh tests/*.sh; do bash -n "$file"; done
+          shellcheck --severity=warning --external-sources --exclude=SC1091 install.sh update.sh menu.sh restore.sh scripts/*.sh services/*/*.sh tests/*.sh
   linux-integration:
     runs-on: ${{ matrix.os }}
     strategy:

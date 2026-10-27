@@ -1,1 +1,35 @@
-{"version":1,"commands":["dns","https","stage"],"language":"FREENET_LANG=ru|en","read_only":true,"diagnostic_exit":"0 for a successful DNS check; 1 for reported failures","codes":["CONFIG_DOMAIN","CONFIG_HOSTS_EQUAL","DNS_NO_IPV4","DNS_LOOKUP_FAILED","HTTPS_DNS","HTTPS_CONNECT","HTTPS_TIMEOUT","HTTPS_TLS","HTTPS_BACKEND","HTTPS_AUTH","HTTPS_RESPONSE","INSTALL_STAGE"]}
+{
+  "version": 1,
+  "commands": [
+    "dns",
+    "https",
+    "stage",
+    "storage"
+  ],
+  "language": "FREENET_LANG=ru|en",
+  "read_only": true,
+  "diagnostic_exit": "0 for successful DNS/storage checks; 1 for reported failures",
+  "codes": [
+    "CONFIG_DOMAIN",
+    "CONFIG_HOSTS_EQUAL",
+    "DNS_NO_IPV4",
+    "DNS_LOOKUP_FAILED",
+    "HTTPS_DNS",
+    "HTTPS_CONNECT",
+    "HTTPS_TIMEOUT",
+    "HTTPS_TLS",
+    "HTTPS_BACKEND",
+    "HTTPS_AUTH",
+    "HTTPS_RESPONSE",
+    "INSTALL_STAGE",
+    "IMAGE_DISK",
+    "IMAGE_DNS",
+    "IMAGE_TLS",
+    "IMAGE_LIMIT",
+    "IMAGE_NOT_FOUND",
+    "IMAGE_AUTH",
+    "COMPOSE_VERSION",
+    "IMAGE_NETWORK",
+    "IMAGE_PULL"
+  ]
+}

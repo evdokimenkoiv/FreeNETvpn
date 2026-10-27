@@ -24,43 +24,9 @@
 
 ## Обновление
 
-Сначала дождитесь завершения операций в кабинете и создайте резервную копию:
+Используйте [обновление одной командой](update.ru.md) ([English](update.en.md)): оно сохраняет настройки/пользователей, создаёт согласованную резервную копию, поддерживает продолжение после сбоя и явный откат. Это заменяет ручное наложение архива и git pull на сервере. Обновление требует окна обслуживания.
 
-```bash
-cd /opt/freenetvpn
-sudo bash scripts/backup.sh
-```
-
-**Если установка сделана через Git:** обновите текущую проверенную ветку без переписывания истории, затем примените конфигурацию:
-
-```bash
-sudo git pull --ff-only
-sudo bash install.sh --existing
-```
-
-**Если установка сделана командой из README:** это архивная установка без `.git`. Следующий блок загружает текущую ветку `main`, накладывает только файлы репозитория и применяет сохранённую конфигурацию. Перед использованием убедитесь, что выбранная версия проверена; для воспроизводимости вместо имени ветки задайте конкретный проверенный commit SHA.
-
-```bash
-sudo bash -c '
-set -e
-cd /opt/freenetvpn
-ref=main
-stage=$(mktemp -d)
-trap "rm -rf -- \"$stage\"" EXIT
-curl -fSL --retry 3 "https://api.github.com/repos/evdokimenkoiv/FreeNETvpn/tarball/$ref" -o "$stage/release.tar.gz"
-mkdir "$stage/code"
-tar -xzf "$stage/release.tar.gz" --strip-components=1 --no-same-owner -C "$stage/code"
-test -f "$stage/code/tools/manage.py"
-test ! -e "$stage/code/.env"
-for name in data runtime backups; do test ! -e "$stage/code/$name"; done
-cp -a "$stage/code/." /opt/freenetvpn/
-bash install.sh --existing
-'
-```
-
-Архив проекта не содержит `.env`, `data/`, `runtime/` и `backups/`; они сохраняются. Устаревшие файлы автоматически не удаляются. Не прерывайте обновление файлов; если копирование завершилось ошибкой, повторите его до запуска установщика. Старые v1-установки требуют отдельной [миграции](migration.md).
-
-`--existing` применяет конфигурацию, **не скачивает обновление кода**. Для переноса состояния на новую машину используйте [восстановление в README](../README.md#operations), только в пустую установку.
+`--existing` у install.sh применяет уже установленный код, но не скачивает исправления. Для получения нового кода используйте update.sh. После первой установки новой версии короткая команда: `sudo bash /opt/freenetvpn/update.sh`.
 
 ## Если запуск не завершился
 

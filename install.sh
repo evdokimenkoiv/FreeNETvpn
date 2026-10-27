@@ -135,6 +135,7 @@ phase=runtime
 python3 tools/manage.py prepare-protocols
 python3 tools/manage.py compose config --quiet
 phase=images
+if python3 tools/diagnostics.py storage "${diagnostic_flags[@]}"; then :; else exit 1; fi
 python3 tools/manage.py compose pull --ignore-buildable
 python3 tools/manage.py compose build --pull
 phase=runtime

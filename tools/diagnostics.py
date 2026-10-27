@@ -151,9 +151,59 @@ STAGES = {
 }
 
 
+def image_pull_failure(output, root):
+    """Classify Docker's message without including arbitrary log text in guidance."""
+    text = output.lower()
+    rules = [
+        (("no space left", "disk quota exceeded"), "IMAGE_DISK", "Docker/containerd could not allocate disk space or inodes. Check df -h, df -i and docker system df. Clean package cache with sudo apt-get clean or enlarge the disk. Do not delete /var/lib/containerd manually or prune VPN volumes. Then retry --existing.", "Docker/containerd не смог выделить место или inode. Проверьте df -h, df -i и docker system df. Очистите кэш пакетов командой sudo apt-get clean либо увеличьте диск. Не удаляйте /var/lib/containerd вручную и не очищайте тома VPN. Затем повторите --existing."),
+        (("no such host", "temporary failure in name resolution"), "IMAGE_DNS", "The server cannot resolve an image registry. Check the server/Docker resolver, not only the VPN website's A record.", "Сервер не разрешает имя реестра образов. Проверьте DNS сервера/Docker; A-запись сайта VPN к этому не относится."),
+        (("x509", "certificate", "tls handshake"), "IMAGE_TLS", "Check system time, CA certificates and HTTPS inspection between Docker and the registry. Do not enable insecure registries.", "Проверьте время, корневые сертификаты и HTTPS-инспекцию на пути к реестру. Не включайте insecure registries."),
+        (("toomanyrequests", "too many requests", "rate limit", "429"), "IMAGE_LIMIT", "The registry rate limit was reached. Wait for its reset or authenticate to that registry with your account, then retry.", "Достигнут лимит реестра. Дождитесь сброса лимита либо авторизуйтесь в этом реестре своей учётной записью, затем повторите."),
+        (("manifest unknown", "manifest not found", "not found", "no matching manifest"), "IMAGE_NOT_FOUND", "The requested image/tag or CPU architecture is unavailable. Identify the image in Docker's error above; check the project's pinned version and supported architecture, then update to a verified fix. Do not substitute an arbitrary image.", "Запрошенный образ/тег или архитектура CPU недоступны. Найдите имя образа в ошибке Docker выше, проверьте закреплённую версию и архитектуру, затем обновитесь до проверенного исправления. Не подставляйте случайный образ."),
+        (("unauthorized", "denied", "forbidden"), "IMAGE_AUTH", "Registry access was denied. Check the named registry, image visibility and any configured Docker login/proxy credentials locally.", "Реестр отказал в доступе. Проверьте указанный реестр, доступность образа и локальные учётные данные Docker/proxy."),
+        (("unknown flag", "unknown shorthand flag"), "COMPOSE_VERSION", "Check docker compose version and install the supported Docker Compose plugin; --ignore-buildable requires a compatible version.", "Проверьте docker compose version и обновите плагин Docker Compose: --ignore-buildable требует совместимой версии."),
+        (("timeout", "deadline exceeded", "connection refused", "network is unreachable"), "IMAGE_NETWORK", "Check outbound HTTPS to the named registry, host/provider network restrictions and Docker proxy settings; then retry.", "Проверьте исходящий HTTPS к указанному реестру, ограничения сети провайдера/машины и proxy Docker, затем повторите."),
+    ]
+    code, fix = "IMAGE_PULL", tr("Read the Docker error above for the failing image and cause. Check docker compose version, registry connectivity and free disk space. A nonzero exit alone does not identify the cause.", "Найдите выше исходную ошибку Docker с именем образа. Проверьте docker compose version, доступ к реестру и свободное место. Один ненулевой код выхода не объясняет причину.")
+    for needles, candidate, en, ru in rules:
+        if any(needle in text for needle in needles):
+            code, fix = candidate, tr(en, ru)
+            break
+    return report(code, tr("Docker could not download the selected images.", "Docker не смог скачать выбранные образы."), fix, root,
+                  "sudo python3 tools/manage.py compose pull --ignore-buildable", os.environ.get("FREENET_NO_FIREWALL") == "1")
+
+
+def storage(root, no_firewall=False):
+    paths = [root, Path("/var/lib/containerd")]
+    try:
+        result = subprocess.run(["docker", "info", "--format", "{{.DockerRootDir}}"], capture_output=True, text=True, timeout=10, check=True)
+        directory = Path(result.stdout.strip())
+        if directory.is_absolute():
+            paths.append(directory)
+    except (OSError, subprocess.SubprocessError):
+        paths.append(Path("/var/lib/docker"))
+    checked, failed = set(), False
+    for path in paths:
+        if not path.exists():
+            continue
+        device = path.stat().st_dev
+        if device in checked:
+            continue
+        checked.add(device)
+        info = os.statvfs(path)
+        free = info.f_bavail * info.f_frsize
+        print(f"STORAGE {path}: {free / 1024**3:.1f} GiB, {info.f_favail} free inodes", flush=True)
+        if free < 2 * 1024**3 or (info.f_files > 0 and info.f_favail < 10000):
+            failed = True
+            report("IMAGE_DISK", tr(f"Insufficient free space/inodes on {path} before image download.", f"Недостаточно места/inode на {path} перед загрузкой образов."),
+                   tr("Minimum preflight reserve: 2 GiB and 10,000 inodes; a full deployment may need substantially more. Check df -h and df -i. Use sudo apt-get clean or enlarge the disk; preserve VPN data and Docker volumes.", "Минимальный запас для начала: 2 GiB и 10 000 inode; полный набор может потребовать значительно больше. Проверьте df -h и df -i. Выполните sudo apt-get clean либо увеличьте диск, сохранив данные VPN и тома Docker."),
+                   root, "df -h; df -i; sudo docker system df", no_firewall)
+    return int(failed)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=["dns", "https", "stage"])
+    parser.add_argument("kind", choices=["dns", "https", "stage", "storage"])
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--no-firewall", action="store_true")
     parser.add_argument("--phase", choices=list(STAGES), default="health")
@@ -162,6 +212,8 @@ def main():
     parser.add_argument("--target", choices=["portal", "wireguard"], default="portal")
     parser.add_argument("--auth", action="store_true")
     args = parser.parse_args()
+    if args.kind == "storage":
+        return storage(args.root, args.no_firewall)
     if args.kind == "stage":
         en, ru, fix_en, fix_ru = STAGES[args.phase]
         return report("INSTALL_STAGE", tr(en, ru), tr(fix_en, fix_ru), args.root, no_firewall=args.no_firewall)

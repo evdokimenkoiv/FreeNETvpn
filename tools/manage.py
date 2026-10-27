@@ -16,7 +16,7 @@ import tarfile
 import tempfile
 import uuid
 import presets
-from diagnostics import validate_hostname, ConfigurationIssue, resume, tr
+from diagnostics import validate_hostname, ConfigurationIssue, resume, tr, image_pull_failure
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlencode
@@ -193,9 +193,19 @@ def compose(args, root=ROOT, capture=False, check=True, input_text=None):
     config = read_config(root)
     env = os.environ.copy()
     env.update(config)
-    return subprocess.run(["docker", "compose", "--project-directory", str(root), "-p", "freenetvpn",
-                           "--env-file", str(root / ".env"), "-f", str(root / "docker-compose.yml"), *args],
-                          cwd=root, env=env, text=True, capture_output=capture, check=check, input=input_text)
+    argv = ["docker", "compose", "--project-directory", str(root), "-p", "freenetvpn",
+            "--env-file", str(root / ".env"), "-f", str(root / "docker-compose.yml"), *args]
+    if args and args[0] == "pull" and not capture:
+        print(tr("Downloading container images; Docker output follows when the command finishes.", "Загружаю образы контейнеров; вывод Docker появится после завершения команды."), flush=True)
+        result = subprocess.run(argv, cwd=root, env=env, text=True, capture_output=True, check=False, input=input_text)
+        sys.stdout.write(result.stdout or "")
+        sys.stderr.write(result.stderr or "")
+        if result.returncode:
+            image_pull_failure((result.stdout or "") + (result.stderr or ""), root)
+            if check:
+                raise subprocess.CalledProcessError(result.returncode, ["docker", "compose", "pull"])
+        return result
+    return subprocess.run(argv, cwd=root, env=env, text=True, capture_output=capture, check=check, input=input_text)
 
 
 def make_backup(root=ROOT):
